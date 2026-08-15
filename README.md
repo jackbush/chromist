@@ -43,21 +43,27 @@ left/right split with the bar on top, and the pinned stripes rotate from
 vertical columns to horizontal bands.
 
 **Pinned pane.** Equal-width stripes, seven maximum, with an extra `+` column
-that disappears once you're full. A bar of hex codes runs along the pane edge
-in the app's background and text colours — click one to copy it to the
-clipboard, silently. Click a stripe to load it into the editor, drag to
-reorder, and use the `×` on the selected stripe to remove it.
+that disappears once you're full. `+` pins a stripe in the current theme colour
+straight away and points the editor at it — there is no separate confirm step.
+A bar of hex codes runs along the pane edge in the app's background and text
+colours; click one to copy it to the clipboard, silently. Click a stripe to
+edit it, drag to reorder, and use the `×` on the selected stripe to remove it.
 
-**Editor.** Changes write back to the selected stripe live. While a pinned
-colour is dirty the button offers `revert`; a new colour offers `pin`. Starting
-a new colour begins from the current theme background.
+**Editor.** A saturation/lightness square with a hue bar, filling the pane. The
+only other thing in there is the hex code, centred above it — and that field is
+editable, so you can type or paste a colour in. Changes write back to the
+selected stripe live.
 
-**Settings** (cog in the action bar):
+**Undo/redo.** The arrows in the action bar step through changes to the palette
+— adds, deletes, reorders and colour edits — with `cmd`/`ctrl` + `Z` and
+`shift` + `cmd`/`ctrl` + `Z` as shortcuts. A continuous run of changes (a drag
+in the picker, a drag to reorder) collapses into one step rather than one per
+pointer event. Theme changes are settings, not palette edits, so they aren't
+undoable.
 
-- *Theme* — Neutral (`#4d4d4d`, the default), Black, White. Black gets white
-  text, the other two get black.
-- *Colour picker* — Sliders (default), Square, Wheel.
-- *Copy share link*.
+**Settings** (cog in the action bar): *Theme* — Neutral (`#4d4d4d`, the
+default), Black, White. Black gets white text, the other two get black. Plus
+*copy share link*.
 
 ## Sharing and storage
 
@@ -87,14 +93,16 @@ roughly 100 calls per 30 seconds before throwing. See
 **culori leaves hue undefined for greys**, which includes two of the three
 themes, so any read of `.h` needs a fallback.
 
-**The wheel picker is hand-built** (`src/components/Wheel.tsx`) — react-colorful
-ships square-and-hue-bar pickers only. The disc is a conic gradient: angle is
-hue, distance from centre is saturation, lightness has its own slider.
+**History coalescing is tag-based.** `useHistory.commit` takes an optional tag;
+successive commits sharing a tag inside 400ms overwrite the present instead of
+deepening the past. Colour edits tag per pin (`edit:<id>`) and reorders tag per
+dragged pin, which is what keeps one drag to one undo step. Anything committed
+without a tag is always its own step.
 
 ## Stack
 
 Vite, React, TypeScript, plain CSS. [react-colorful](https://github.com/omgovich/react-colorful)
-for the square picker, [culori](https://culorijs.org/) for colour conversion —
+for the picker, [culori](https://culorijs.org/) for colour conversion —
 culori also speaks OKLCH, which is the sane basis for tint ramps or harmony
 suggestions if those ever get built.
 
@@ -107,8 +115,8 @@ src/
   storage.ts                 localStorage, with validation of anything read back
   urlHash.ts                 share-link encoding and decoding
   clipboard.ts               copy, with a fallback for non-secure origins
-  components/                PinnedPane, Editor, Sliders, Wheel, ActionBar, SettingsPopover
-  hooks/                     usePersistentState, useIsDesktop
+  components/                PinnedPane, Editor, ActionBar, SettingsPopover
+  hooks/                     useHistory, usePersistentState, useIsDesktop
 checks/logic.ts              assertions run by `npm run check`
 tasks/todo.md                build plan and review notes
 ```

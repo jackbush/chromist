@@ -1,74 +1,78 @@
-import { useCallback, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { HslColorPicker } from 'react-colorful'
-import type { Hsl, PickerStyle } from '../types'
-import { hslToHex } from '../color'
-import { copy } from '../clipboard'
-import { Sliders } from './Sliders'
-import { Wheel } from './Wheel'
+import type { Hsl } from '../types'
+import { hexToHsl, hslToHex } from '../color'
 
 type Props = {
-  colour: Hsl
-  picker: PickerStyle
-  mode: 'new' | 'pin'
-  isDirty: boolean
-  atCapacity: boolean
+  colour: Hsl | null
   onChange: (hsl: Hsl) => void
-  onPin: () => void
-  onRevert: () => void
 }
 
-export function Editor({
-  colour,
-  picker,
-  mode,
-  isDirty,
-  atCapacity,
-  onChange,
-  onPin,
-  onRevert,
-}: Props) {
-  const hex = hslToHex(colour).toUpperCase()
-  const [copied, setCopied] = useState(false)
-  const timer = useRef<number | null>(null)
+const COMPLETE = /^#[0-9a-f]{6}$/i
 
-  const handleCopy = useCallback(async () => {
-    await copy(hex)
-    setCopied(true)
-    if (timer.current) window.clearTimeout(timer.current)
-    timer.current = window.setTimeout(() => setCopied(false), 200)
-  }, [hex])
+export function Editor({ colour, onChange }: Props) {
+  const hex = colour ? hslToHex(colour).toUpperCase() : ''
+
+  // While typing, the field holds text that isn't a colour yet, so it keeps its
+  // own value and re-syncs whenever the colour changes from anywhere else.
+  const [draft, setDraft] = useState(hex)
+  useEffect(() => setDraft(hex), [hex])
+
+  const commitText = (text: string) => {
+    const candidate = text.trim().startsWith('#') ? text.trim() : `#${text.trim()}`
+    if (!COMPLETE.test(candidate)) {
+      setDraft(hex) // not a colour — put the real value back
+      return
+    }
+    const next = hexToHsl(candidate)
+    if (next) onChange(next)
+    else setDraft(hex)
+  }
 
   return (
     <section className="editor" aria-label="Colour editor">
-      <div className="editor-head">
-        <button
-          type="button"
-          className={`editor-hex${copied ? ' is-copied' : ''}`}
-          onClick={handleCopy}
-          title="Copy to clipboard"
-        >
-          {hex}
-        </button>
-        <span className="editor-preview" style={{ background: hslToHex(colour) }} aria-hidden />
+      <div className="editor-bar">
+        <input
+          type="text"
+          className="editor-hex"
+          value={draft}
+          disabled={!colour}
+          spellCheck={false}
+          autoComplete="off"
+          autoCapitalize="off"
+          inputMode="text"
+          maxLength={7}
+          aria-label="Hex code"
+          placeholder="—"
+          onChange={(e) => {
+            const text = e.target.value
+            setDraft(text)
+            // Apply as soon as it's a full hex, so typing feels live.
+            const candidate = text.startsWith('#') ? text : `#${text}`
+            if (COMPLETE.test(candidate)) {
+              const next = hexToHsl(candidate)
+              if (next) onChange(next)
+            }
+          }}
+          onBlur={(e) => commitText(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') {
+              commitText(e.currentTarget.value)
+              e.currentTarget.blur()
+            }
+            if (e.key === 'Escape') {
+              setDraft(hex)
+              e.currentTarget.blur()
+            }
+          }}
+        />
       </div>
 
       <div className="editor-picker">
-        {picker === 'sliders' && <Sliders colour={colour} onChange={onChange} />}
-        {picker === 'wheel' && <Wheel colour={colour} onChange={onChange} />}
-        {picker === 'square' && (
+        {colour ? (
           <HslColorPicker color={colour} onChange={(c) => onChange({ h: c.h, s: c.s, l: c.l })} />
-        )}
-      </div>
-
-      <div className="editor-actions">
-        {mode === 'new' ? (
-          <button type="button" className="btn" onClick={onPin} disabled={atCapacity}>
-            {atCapacity ? 'full' : 'pin'}
-          </button>
         ) : (
-          <button type="button" className="btn" onClick={onRevert} disabled={!isDirty}>
-            {isDirty ? 'revert' : 'pinned'}
-          </button>
+          <p className="editor-hint">nothing to edit yet</p>
         )}
       </div>
     </section>

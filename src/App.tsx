@@ -1,135 +1,109 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import type { Hsl, Pin, Selection } from './types'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import type { Hsl, Pin } from './types'
 import { MAX_PINS, THEMES } from './types'
-import { hexToHsl, hslEquals } from './color'
+import { hexToHsl } from './color'
 import { newId } from './id'
-import { usePersistentState } from './hooks/usePersistentState'
+import { useInitialState, usePersist } from './hooks/usePersistentState'
+import { useHistory } from './hooks/useHistory'
 import { PinnedPane } from './components/PinnedPane'
 import { Editor } from './components/Editor'
 import { ActionBar } from './components/ActionBar'
 
 export function App() {
-  const { pins, setPins, settings, setSettings } = usePersistentState()
-  const theme = THEMES[settings.theme]
+  const initial = useInitialState()
 
+  const { present: pins, commit, undo, redo, canUndo, canRedo } = useHistory<Pin[]>(initial.pins)
+  const [settings, setSettings] = useState(initial.settings)
+  usePersist(pins, settings)
+
+  const theme = THEMES[settings.theme]
   const themeHsl = useMemo(() => hexToHsl(theme.bg) ?? { h: 0, s: 0, l: 30 }, [theme.bg])
 
-  const [selection, setSelection] = useState<Selection>({ mode: 'new' })
-  const [draft, setDraft] = useState<Hsl>(themeHsl)
-  /** Snapshot of a pin as it was when selected, so REVERT has something to go back to. */
-  const [baseline, setBaseline] = useState<Hsl | null>(null)
-  /** An untouched draft follows the theme; once edited it is the user's colour. */
-  const draftPristine = useRef(true)
+  const [selectedId, setSelectedId] = useState<string | null>(initial.pins[0]?.id ?? null)
 
+  // Undo, redo and delete can all retire the selected pin.
   useEffect(() => {
-    if (selection.mode === 'new' && draftPristine.current) setDraft(themeHsl)
-  }, [themeHsl, selection.mode])
-
-  const selectedPin =
-    selection.mode === 'pin' ? (pins.find((p) => p.id === selection.id) ?? null) : null
-
-  // A pin can vanish (deleted, or replaced by a shared palette) while selected.
-  useEffect(() => {
-    if (selection.mode === 'pin' && !pins.some((p) => p.id === selection.id)) {
-      setSelection({ mode: 'new' })
-      draftPristine.current = true
-      setDraft(themeHsl)
-      setBaseline(null)
+    if (selectedId !== null && !pins.some((p) => p.id === selectedId)) {
+      setSelectedId(pins[0]?.id ?? null)
     }
-  }, [pins, selection, themeHsl])
+  }, [pins, selectedId])
 
-  const colour = selectedPin ? selectedPin.hsl : draft
-  const isDirty = Boolean(selectedPin && baseline && !hslEquals(selectedPin.hsl, baseline))
+  const selected = pins.find((p) => p.id === selectedId) ?? null
   const atCapacity = pins.length >= MAX_PINS
+
+  /** `+` pins the theme colour straight away and hands it to the editor. */
+  const handleAdd = useCallback(() => {
+    if (atCapacity) return
+    const pin: Pin = { id: newId(), hsl: themeHsl }
+    commit([...pins, pin])
+    setSelectedId(pin.id)
+  }, [atCapacity, commit, pins, themeHsl])
 
   const handleChange = useCallback(
     (next: Hsl) => {
-      if (selection.mode === 'pin') {
-        const id = selection.id
-        setPins((prev) => prev.map((p) => (p.id === id ? { ...p, hsl: next } : p)))
-      } else {
-        draftPristine.current = false
-        setDraft(next)
-      }
+      if (!selected) return
+      const id = selected.id
+      commit(
+        pins.map((p) => (p.id === id ? { ...p, hsl: next } : p)),
+        `edit:${id}`,
+      )
     },
-    [selection, setPins],
+    [commit, pins, selected],
   )
-
-  const handleSelectPin = useCallback(
-    (id: string) => {
-      const pin = pins.find((p) => p.id === id)
-      if (!pin) return
-      setSelection({ mode: 'pin', id })
-      setBaseline(pin.hsl)
-    },
-    [pins],
-  )
-
-  const handleNew = useCallback(() => {
-    setSelection({ mode: 'new' })
-    setBaseline(null)
-    draftPristine.current = true
-    setDraft(themeHsl)
-  }, [themeHsl])
-
-  const handlePin = useCallback(() => {
-    if (atCapacity) return
-    const pin: Pin = { id: newId(), hsl: draft }
-    setPins((prev) => [...prev, pin])
-    setSelection({ mode: 'pin', id: pin.id })
-    setBaseline(draft)
-  }, [atCapacity, draft, setPins])
-
-  const handleRevert = useCallback(() => {
-    if (!selectedPin || !baseline) return
-    const id = selectedPin.id
-    setPins((prev) => prev.map((p) => (p.id === id ? { ...p, hsl: baseline } : p)))
-  }, [baseline, selectedPin, setPins])
 
   const handleDelete = useCallback(
-    (id: string) => setPins((prev) => prev.filter((p) => p.id !== id)),
-    [setPins],
+    (id: string) => commit(pins.filter((p) => p.id !== id)),
+    [commit, pins],
   )
 
   const handleReorder = useCallback(
     (from: number, to: number) => {
-      setPins((prev) => {
-        if (from === to || from < 0 || to < 0 || from >= prev.length || to >= prev.length) {
-          return prev
-        }
-        const next = [...prev]
-        const [moved] = next.splice(from, 1)
-        next.splice(to, 0, moved)
-        return next
-      })
+      if (from === to || from < 0 || to < 0 || from >= pins.length || to >= pins.length) return
+      const next = [...pins]
+      const [moved] = next.splice(from, 1)
+      next.splice(to, 0, moved)
+      // One tag for the whole drag, so a reorder is a single undo step.
+      commit(next, `reorder:${moved.id}`)
     },
-    [setPins],
+    [commit, pins],
   )
+
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      const meta = e.metaKey || e.ctrlKey
+      if (!meta || e.key.toLowerCase() !== 'z') return
+      // Let the field's own undo work while typing a hex code.
+      if (e.target instanceof HTMLInputElement && e.target.type === 'text') return
+      e.preventDefault()
+      if (e.shiftKey) redo()
+      else undo()
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [redo, undo])
 
   return (
     <div className="app" data-theme={settings.theme}>
-      <ActionBar pins={pins} settings={settings} onSettingsChange={setSettings} />
+      <ActionBar
+        pins={pins}
+        settings={settings}
+        onSettingsChange={setSettings}
+        canUndo={canUndo}
+        canRedo={canRedo}
+        onUndo={undo}
+        onRedo={redo}
+      />
       <main className="panes">
         <PinnedPane
           pins={pins}
-          selectedId={selectedPin?.id ?? null}
+          selectedId={selectedId}
           showAdd={!atCapacity}
-          isAdding={selection.mode === 'new'}
-          onSelect={handleSelectPin}
-          onNew={handleNew}
+          onSelect={setSelectedId}
+          onAdd={handleAdd}
           onDelete={handleDelete}
           onReorder={handleReorder}
         />
-        <Editor
-          colour={colour}
-          picker={settings.picker}
-          mode={selection.mode}
-          isDirty={isDirty}
-          atCapacity={atCapacity}
-          onChange={handleChange}
-          onPin={handlePin}
-          onRevert={handleRevert}
-        />
+        <Editor colour={selected?.hsl ?? null} onChange={handleChange} />
       </main>
     </div>
   )

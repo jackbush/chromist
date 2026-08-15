@@ -1,11 +1,11 @@
-import type { Pin, Settings, ThemeName, PickerStyle } from './types'
-import { MAX_PINS, THEMES, PICKER_LABELS } from './types'
+import type { Pin, Settings, ThemeName } from './types'
+import { MAX_PINS, THEMES } from './types'
 
 const KEY = 'palette-builder.v1'
 
 type Stored = { pins: Pin[]; settings: Settings }
 
-export const DEFAULT_SETTINGS: Settings = { theme: 'neutral', picker: 'sliders' }
+export const DEFAULT_SETTINGS: Settings = { theme: 'neutral' }
 
 function isHsl(v: unknown): v is Pin['hsl'] {
   if (typeof v !== 'object' || v === null) return false
@@ -49,16 +49,14 @@ export function load(): Stored {
       : []
 
     const s = (data.settings ?? {}) as Record<string, unknown>
+    // Records written by older builds may carry extra keys (e.g. `picker`);
+    // reading field by field drops them rather than letting them through.
     const theme =
       typeof s.theme === 'string' && s.theme in THEMES
         ? (s.theme as ThemeName)
         : DEFAULT_SETTINGS.theme
-    const picker =
-      typeof s.picker === 'string' && s.picker in PICKER_LABELS
-        ? (s.picker as PickerStyle)
-        : DEFAULT_SETTINGS.picker
 
-    return { pins, settings: { theme, picker } }
+    return { pins, settings: { theme } }
   } catch {
     return fallback
   }

@@ -1,6 +1,7 @@
 import { hexToHsl, hslToHex, hslEquals, toBareHex } from '../src/color'
 import { readHash, buildShareUrl } from '../src/urlHash'
 import { load, save, DEFAULT_SETTINGS } from '../src/storage'
+import { reducer } from '../src/hooks/useHistory'
 
 let pass = 0
 let fail = 0
@@ -64,9 +65,47 @@ store.set(
 const loaded = load()
 eq('malformed pins filtered out', loaded.pins.length, 1)
 eq('unknown theme falls back', loaded.settings.theme, 'neutral')
-eq('valid picker kept', loaded.settings.picker, 'wheel')
+eq('settings from older builds drop unknown keys', loaded.settings, { theme: 'neutral' })
 save({ pins: [{ id: 'a', hsl: { h: 1, s: 2, l: 3 } }], settings: DEFAULT_SETTINGS })
 eq('save round trips', load().pins[0].id, 'a')
+
+console.log('\nundo / redo')
+{
+  const start = { past: [] as string[], present: 'a', future: [] as string[] }
+  const step = (s: typeof start, next: string, coalesce = false) =>
+    reducer(s, { type: 'commit', next, coalesce })
+
+  let s = step(step(start, 'b'), 'c')
+  eq('commits stack up', [s.past, s.present], [['a', 'b'], 'c'])
+
+  s = reducer(s, { type: 'undo' })
+  eq('undo steps back one', [s.past, s.present, s.future], [['a'], 'b', ['c']])
+
+  s = reducer(s, { type: 'undo' })
+  eq('undo again', [s.past, s.present, s.future], [[], 'a', ['b', 'c']])
+
+  eq('undo at the start is a no-op', reducer(s, { type: 'undo' }).present, 'a')
+
+  s = reducer(s, { type: 'redo' })
+  eq('redo steps forward', [s.past, s.present, s.future], [['a'], 'b', ['c']])
+
+  const branched = step(s, 'x')
+  eq('committing after undo drops the redo branch', branched.future, [])
+  eq('committing after undo keeps the past', branched.past, ['a', 'b'])
+
+  const coalesced = step(step(start, 'b'), 'c', true)
+  eq('coalesced commit does not deepen history', [coalesced.past, coalesced.present], [['a'], 'c'])
+  eq(
+    'undo after coalescing lands before the whole run',
+    reducer(coalesced, { type: 'undo' }).present,
+    'a',
+  )
+
+  let long = start
+  for (let i = 0; i < 150; i++) long = step(long, `v${i}`)
+  eq('history is capped', long.past.length, 100)
+  eq('cap keeps the most recent', long.past[99], 'v148')
+}
 
 console.log(`\n${pass} passed, ${fail} failed\n`)
 process.exit(fail === 0 ? 0 : 1)

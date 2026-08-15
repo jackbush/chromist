@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
-import type { PickerStyle, Pin, Settings, ThemeName } from '../types'
-import { PICKER_LABELS, THEMES } from '../types'
+import type { Pin, Settings, ThemeName } from '../types'
+import { THEMES } from '../types'
 import { buildShareUrl } from '../urlHash'
 import { copy } from '../clipboard'
 
@@ -11,7 +11,6 @@ type Props = {
 }
 
 const THEME_ORDER: ThemeName[] = ['neutral', 'black', 'white']
-const PICKER_ORDER: PickerStyle[] = ['sliders', 'square', 'wheel']
 
 export function SettingsPopover({ pins, settings, onChange }: Props) {
   const ref = useRef<HTMLDivElement>(null)
@@ -36,23 +35,6 @@ export function SettingsPopover({ pins, settings, onChange }: Props) {
               onClick={() => onChange({ ...settings, theme: name })}
             >
               {THEMES[name].label}
-            </button>
-          ))}
-        </div>
-      </fieldset>
-
-      <fieldset className="popover-group">
-        <legend>Colour picker</legend>
-        <div className="popover-options">
-          {PICKER_ORDER.map((style) => (
-            <button
-              key={style}
-              type="button"
-              className={`opt${settings.picker === style ? ' is-active' : ''}`}
-              aria-pressed={settings.picker === style}
-              onClick={() => onChange({ ...settings, picker: style })}
-            >
-              {PICKER_LABELS[style]}
             </button>
           ))}
         </div>

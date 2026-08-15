@@ -132,5 +132,42 @@ plain http on a phone, where the `execCommand` fallback path takes over.
 ### Notes
 
 `react-colorful` ships square-and-hue-bar pickers only — it has no wheel — so
-the wheel style is hand-built (`src/components/Wheel.tsx`): conic-gradient disc,
-angle is hue, distance from centre is saturation, lightness on its own slider.
+the wheel style was hand-built. (Removed in the revision below.)
+
+---
+
+## Revision — editor simplification and undo/redo
+
+Requested after the first build.
+
+- [x] Colour picker setting dropped; always the square + hue bar
+- [x] Picker fills the editor pane, with only the hex code above it
+- [x] Hex code centred and editable — type or paste to set the colour
+- [x] `+` pins a theme-coloured stripe immediately and focuses the editor on it
+- [x] Pin/revert button removed; no draft state left in the app
+- [x] Undo/redo arrows in the action bar, plus cmd/ctrl+Z and shift+cmd/ctrl+Z
+- [x] Deleted `Sliders.tsx` and `Wheel.tsx`
+
+### How undo works
+
+`src/hooks/useHistory.ts` — past/present/future over the pins array, driven by a
+pure reducer. `commit` takes an optional tag; commits sharing a tag inside 400ms
+collapse into one entry, so a picker drag is one undo step rather than one per
+pointer event. History caps at 100 entries. Theme is a setting, not a palette
+edit, so it stays outside history.
+
+Selection follows the palette: when undo, redo or delete retires the selected
+pin, selection falls back to the first pin, or to none when the palette empties.
+
+### Verified
+
+`npm run check` 40/40 — 11 new assertions cover the reducer (stacking, undo,
+redo, no-op at the ends, dropping the redo branch on a new commit, coalescing,
+and the cap). Screenshots confirmed: `+` adds a `#4D4D4D` stripe and selects it;
+typing `#ff0000` in the hex field applies live to the stripe and moves the
+picker handles; one undo reverts the whole typed edit; a second undo removes the
+added stripe and disables the undo arrow. Both layouts and the empty state
+re-checked.
+
+Two nits fixed on review: a stray border above the `+` column when the palette
+was empty, and the editor hint duplicating the pins-pane instruction.

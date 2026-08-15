@@ -6,9 +6,21 @@ type Props = {
   pins: Pin[]
   settings: Settings
   onSettingsChange: (settings: Settings) => void
+  canUndo: boolean
+  canRedo: boolean
+  onUndo: () => void
+  onRedo: () => void
 }
 
-export function ActionBar({ pins, settings, onSettingsChange }: Props) {
+export function ActionBar({
+  pins,
+  settings,
+  onSettingsChange,
+  canUndo,
+  canRedo,
+  onUndo,
+  onRedo,
+}: Props) {
   const [open, setOpen] = useState(false)
   const wrapRef = useRef<HTMLDivElement>(null)
 
@@ -33,22 +45,70 @@ export function ActionBar({ pins, settings, onSettingsChange }: Props) {
   return (
     <header className="bar">
       <h1 className="bar-title">palette</h1>
-      <div className="bar-settings" ref={wrapRef}>
+
+      <div className="bar-actions">
         <button
           type="button"
-          className="bar-cog"
-          aria-label="Settings"
-          aria-expanded={open}
-          aria-haspopup="dialog"
-          onClick={() => setOpen((v) => !v)}
+          className="bar-btn"
+          onClick={onUndo}
+          disabled={!canUndo}
+          aria-label="Undo"
+          title="Undo"
         >
-          <Cog />
+          <Arrow />
         </button>
-        {open && (
-          <SettingsPopover pins={pins} settings={settings} onChange={onSettingsChange} />
-        )}
+        <button
+          type="button"
+          className="bar-btn is-flipped"
+          onClick={onRedo}
+          disabled={!canRedo}
+          aria-label="Redo"
+          title="Redo"
+        >
+          <Arrow />
+        </button>
+
+        <div className="bar-settings" ref={wrapRef}>
+          <button
+            type="button"
+            className="bar-btn"
+            aria-label="Settings"
+            aria-expanded={open}
+            aria-haspopup="dialog"
+            onClick={() => setOpen((v) => !v)}
+          >
+            <Cog />
+          </button>
+          {open && (
+            <SettingsPopover pins={pins} settings={settings} onChange={onSettingsChange} />
+          )}
+        </div>
       </div>
     </header>
+  )
+}
+
+/** Points left; the redo button mirrors it with a CSS transform. */
+function Arrow() {
+  return (
+    <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false">
+      <path
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M9 14 4 9l5-5"
+      />
+      <path
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M4 9h9a7 7 0 0 1 0 14h-3"
+      />
+    </svg>
   )
 }
 

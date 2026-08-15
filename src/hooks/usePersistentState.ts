@@ -3,26 +3,26 @@ import type { Pin, Settings } from '../types'
 import { load, save } from '../storage'
 import { readHash, syncHash } from '../urlHash'
 
-/** Dragging a slider fires changes per pointer event; Safari rate-limits
+/** Dragging in the picker fires changes per pointer event; Safari rate-limits
  *  history.replaceState (~100 calls / 30s) and will throw, so writes are
  *  debounced rather than made on every change. */
 const WRITE_DELAY = 250
 
 /**
- * Pins and settings share one storage record, so they load and save together.
- * A palette in the URL hash wins over stored pins on first paint — a shared
- * link should show the palette it promises.
+ * The starting palette and settings, resolved once. A palette in the URL hash
+ * wins over stored pins — a shared link should show the palette it promises.
  */
-export function usePersistentState() {
+export function useInitialState(): { pins: Pin[]; settings: Settings } {
   const [initial] = useState(() => {
     const stored = load()
     const shared = readHash(window.location.hash)
     return { pins: shared ?? stored.pins, settings: stored.settings }
   })
+  return initial
+}
 
-  const [pins, setPins] = useState<Pin[]>(initial.pins)
-  const [settings, setSettings] = useState<Settings>(initial.settings)
-
+/** Mirrors the live palette into localStorage and the address bar. */
+export function usePersist(pins: Pin[], settings: Settings): void {
   const latest = useRef({ pins, settings })
   latest.current = { pins, settings }
 
@@ -50,6 +50,4 @@ export function usePersistentState() {
       document.removeEventListener('visibilitychange', flush)
     }
   }, [])
-
-  return { pins, setPins, settings, setSettings }
 }

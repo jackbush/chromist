@@ -8,9 +8,8 @@ type Props = {
   pins: Pin[]
   selectedId: string | null
   showAdd: boolean
-  isAdding: boolean
   onSelect: (id: string) => void
-  onNew: () => void
+  onAdd: () => void
   onDelete: (id: string) => void
   onReorder: (from: number, to: number) => void
 }
@@ -21,9 +20,8 @@ export function PinnedPane({
   pins,
   selectedId,
   showAdd,
-  isAdding,
   onSelect,
-  onNew,
+  onAdd,
   onDelete,
   onReorder,
 }: Props) {
@@ -162,12 +160,14 @@ export function PinnedPane({
         })}
 
         {showAdd && (
-          <div className={`pin pin-add${isAdding ? ' is-selected' : ''}`}>
-            <div className="pin-hex pin-hex-blank" aria-hidden="true" />
+          <div className="pin pin-add">
+            {/* Continues the hex bar across the add column — but with no pins
+                there is no bar to continue, only a stray line. */}
+            {pins.length > 0 && <div className="pin-hex pin-hex-blank" aria-hidden="true" />}
             <button
               type="button"
               className="pin-swatch pin-swatch-add"
-              onClick={onNew}
+              onClick={onAdd}
               aria-label="Add a colour"
             >
               <span aria-hidden="true">+</span>
