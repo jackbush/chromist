@@ -1,4 +1,4 @@
-import { hexToHsl, hslToHex, hslEquals, toBareHex } from '../src/color'
+import { hexToHsl, hslToHex, hslEquals, toBareHex, oppositeHsl, randomHsl } from '../src/color'
 import { readHash, buildShareUrl } from '../src/urlHash'
 import { load, save, DEFAULT_SETTINGS } from '../src/storage'
 import { reducer } from '../src/hooks/useHistory'
@@ -26,6 +26,40 @@ for (const hex of ['#2e86ab','#f6f5ae','#ff5733','#010203','#7f7f7f','#00ff88'])
 eq('invalid hex rejected', hexToHsl('nonsense'), null)
 eq('bare hex has no hash', toBareHex({ h: 0, s: 100, l: 50 }), 'ff0000')
 eq('hslEquals', hslEquals({ h: 1, s: 2, l: 3 }, { h: 1, s: 2, l: 3 }), true)
+
+console.log('\nopposite colour')
+{
+  const opp = (hex: string) => hslToHex(oppositeHsl(hexToHsl(hex)!))
+
+  eq('black -> white', opp('#000000'), '#ffffff')
+  eq('white -> black', opp('#ffffff'), '#000000')
+  // The reason lightness is mirrored rather than hue simply rotated: a plain
+  // rotation is a no-op on every neutral, and the themes are all neutral.
+  eq('grey moves', opp('#4d4d4d'), '#b2b2b2')
+
+  const before = hexToHsl('#2e86ab')!
+  const after = oppositeHsl(before)
+  eq('hue rotates half a turn', Math.round(after.h), Math.round((before.h + 180) % 360))
+  eq('saturation is untouched', after.s, before.s)
+  eq('lightness mirrors around 50', after.l, 100 - before.l)
+  eq('applying it twice returns the original', hslToHex(oppositeHsl(after)), '#2e86ab')
+
+  let moved = 0
+  for (const hex of ['#2e86ab', '#ff5733', '#f6f5ae', '#4d4d4d', '#000000', '#808080']) {
+    if (opp(hex) !== hex) moved++
+  }
+  eq('every sample changes colour', moved, 6)
+}
+
+console.log('\nrandom start colour')
+{
+  const samples = Array.from({ length: 500 }, () => randomHsl())
+  eq('hue stays in range', samples.every((c) => c.h >= 0 && c.h < 360), true)
+  eq('saturation stays vivid', samples.every((c) => c.s >= 55 && c.s <= 90), true)
+  eq('lightness stays usable', samples.every((c) => c.l >= 40 && c.l <= 65), true)
+  eq('always a valid hex', samples.every((c) => /^#[0-9a-f]{6}$/.test(hslToHex(c))), true)
+  eq('hues actually vary', new Set(samples.map((c) => Math.round(c.h))).size > 100, true)
+}
 
 console.log('\nurl hash')
 eq('empty hash -> null', readHash(''), null)

@@ -1,7 +1,7 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import type { Hsl, Pin } from './types'
-import { MAX_PINS, THEMES } from './types'
-import { hexToHsl } from './color'
+import { MAX_PINS } from './types'
+import { oppositeHsl, randomHsl } from './color'
 import { newId } from './id'
 import { useInitialState, usePersist } from './hooks/usePersistentState'
 import { useHistory } from './hooks/useHistory'
@@ -16,32 +16,27 @@ export function App() {
   const [settings, setSettings] = useState(initial.settings)
   usePersist(pins, settings)
 
-  const theme = THEMES[settings.theme]
-  const themeHsl = useMemo(() => hexToHsl(theme.bg) ?? { h: 0, s: 0, l: 30 }, [theme.bg])
+  const [selectedId, setSelectedId] = useState<string>(initial.pins[0].id)
 
-  const [selectedId, setSelectedId] = useState<string | null>(initial.pins[0]?.id ?? null)
-
-  // Undo, redo and delete can all retire the selected pin.
+  // Undo, redo and delete can all retire the selected pin. The palette is
+  // never empty, so there is always something to fall back to.
   useEffect(() => {
-    if (selectedId !== null && !pins.some((p) => p.id === selectedId)) {
-      setSelectedId(pins[0]?.id ?? null)
-    }
+    if (!pins.some((p) => p.id === selectedId)) setSelectedId(pins[0].id)
   }, [pins, selectedId])
 
-  const selected = pins.find((p) => p.id === selectedId) ?? null
+  const selected = pins.find((p) => p.id === selectedId) ?? pins[0]
   const atCapacity = pins.length >= MAX_PINS
 
-  /** `+` pins the theme colour straight away and hands it to the editor. */
+  /** `+` pins the opposite of whatever is selected and hands it to the editor. */
   const handleAdd = useCallback(() => {
     if (atCapacity) return
-    const pin: Pin = { id: newId(), hsl: themeHsl }
+    const pin: Pin = { id: newId(), hsl: oppositeHsl(selected.hsl) }
     commit([...pins, pin])
     setSelectedId(pin.id)
-  }, [atCapacity, commit, pins, themeHsl])
+  }, [atCapacity, commit, pins, selected])
 
   const handleChange = useCallback(
     (next: Hsl) => {
-      if (!selected) return
       const id = selected.id
       commit(
         pins.map((p) => (p.id === id ? { ...p, hsl: next } : p)),
@@ -51,10 +46,19 @@ export function App() {
     [commit, pins, selected],
   )
 
-  const handleDelete = useCallback(
-    (id: string) => commit(pins.filter((p) => p.id !== id)),
-    [commit, pins],
-  )
+  /** Removing the last colour starts over rather than leaving the app with
+   *  nothing to edit. With no selection left there is no opposite to take, so
+   *  it lands on a random colour — the same state a first-time user gets. */
+  const handleDeleteSelected = useCallback(() => {
+    const remaining = pins.filter((p) => p.id !== selected.id)
+    if (remaining.length > 0) {
+      commit(remaining)
+      return
+    }
+    const fresh: Pin = { id: newId(), hsl: randomHsl() }
+    commit([fresh])
+    setSelectedId(fresh.id)
+  }, [commit, pins, selected])
 
   const handleReorder = useCallback(
     (from: number, to: number) => {
@@ -96,14 +100,13 @@ export function App() {
       <main className="panes">
         <PinnedPane
           pins={pins}
-          selectedId={selectedId}
+          selectedId={selected.id}
           showAdd={!atCapacity}
           onSelect={setSelectedId}
           onAdd={handleAdd}
-          onDelete={handleDelete}
           onReorder={handleReorder}
         />
-        <Editor colour={selected?.hsl ?? null} onChange={handleChange} />
+        <Editor colour={selected.hsl} onChange={handleChange} onDelete={handleDeleteSelected} />
       </main>
     </div>
   )

@@ -31,6 +31,26 @@ export function hslEquals(a: Hsl, b: Hsl): boolean {
   return a.h === b.h && a.s === b.s && a.l === b.l
 }
 
+/**
+ * The opposite of a colour: hue rotated half a turn with lightness mirrored
+ * around 50%, saturation untouched. Mirroring lightness is what keeps this
+ * useful on neutrals — a plain hue rotation leaves any grey exactly where it
+ * was, and the app's own theme colours are all greys.
+ */
+export function oppositeHsl({ h, s, l }: Hsl): Hsl {
+  return { h: (h + 180) % 360, s, l: 100 - l }
+}
+
+/** Random hue, with saturation and lightness held in a usable band so the app
+ *  never opens on something muddy or near-black. */
+export function randomHsl(): Hsl {
+  return {
+    h: Math.random() * 360,
+    s: 55 + Math.random() * 35,
+    l: 40 + Math.random() * 25,
+  }
+}
+
 /** Bare six-digit hex, no leading hash — the form used in the share URL. */
 export function toBareHex(hsl: Hsl): string {
   return hslToHex(hsl).slice(1)

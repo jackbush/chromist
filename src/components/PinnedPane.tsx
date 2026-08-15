@@ -6,25 +6,16 @@ import { useIsDesktop } from '../hooks/useIsDesktop'
 
 type Props = {
   pins: Pin[]
-  selectedId: string | null
+  selectedId: string
   showAdd: boolean
   onSelect: (id: string) => void
   onAdd: () => void
-  onDelete: (id: string) => void
   onReorder: (from: number, to: number) => void
 }
 
 const DRAG_THRESHOLD = 8
 
-export function PinnedPane({
-  pins,
-  selectedId,
-  showAdd,
-  onSelect,
-  onAdd,
-  onDelete,
-  onReorder,
-}: Props) {
+export function PinnedPane({ pins, selectedId, showAdd, onSelect, onAdd, onReorder }: Props) {
   const isDesktop = useIsDesktop()
   const containerRef = useRef<HTMLDivElement>(null)
   const [copied, setCopied] = useState<string | null>(null)
@@ -95,25 +86,17 @@ export function PinnedPane({
   return (
     <section className="pins" aria-label="Pinned colours">
       <div className="pins-track" ref={containerRef}>
-        {pins.length === 0 && (
-          <div className="pins-empty">
-            <p>pin a colour to get started</p>
-          </div>
-        )}
-
         {pins.map((pin, index) => {
           const hex = hslToHex(pin.hsl)
           const selected = pin.id === selectedId
           return (
-            <div
-              key={pin.id}
-              className={`pin${selected ? ' is-selected' : ''}${
-                draggingId === pin.id ? ' is-dragging' : ''
-              }`}
-            >
+            <div key={pin.id} className={`pin${draggingId === pin.id ? ' is-dragging' : ''}`}>
+              {/* Selection reads as an inverted hex cell, not an outline. */}
               <button
                 type="button"
-                className={`pin-hex${copied === pin.id ? ' is-copied' : ''}`}
+                className={`pin-hex${selected ? ' is-selected' : ''}${
+                  copied === pin.id ? ' is-copied' : ''
+                }`}
                 onClick={() => handleCopy(pin)}
                 title="Copy to clipboard"
               >
@@ -139,31 +122,15 @@ export function PinnedPane({
                     onSelect(pin.id)
                   }
                 }}
-              >
-                {selected && (
-                  <button
-                    type="button"
-                    className="pin-delete"
-                    aria-label={`Remove colour ${hex}`}
-                    onPointerDown={(e) => e.stopPropagation()}
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      onDelete(pin.id)
-                    }}
-                  >
-                    ×
-                  </button>
-                )}
-              </div>
+              />
             </div>
           )
         })}
 
         {showAdd && (
           <div className="pin pin-add">
-            {/* Continues the hex bar across the add column — but with no pins
-                there is no bar to continue, only a stray line. */}
-            {pins.length > 0 && <div className="pin-hex pin-hex-blank" aria-hidden="true" />}
+            {/* Keeps the add column's swatch aligned with the others. */}
+            <div className="pin-hex pin-hex-blank" aria-hidden="true" />
             <button
               type="button"
               className="pin-swatch pin-swatch-add"

@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import type { Pin, Settings } from '../types'
+import { randomHsl } from '../color'
+import { newId } from '../id'
 import { load, save } from '../storage'
 import { readHash, syncHash } from '../urlHash'
 
@@ -8,15 +10,26 @@ import { readHash, syncHash } from '../urlHash'
  *  debounced rather than made on every change. */
 const WRITE_DELAY = 250
 
+/** A fresh pin on a random colour — where a first-time user starts. */
+export function randomPin(): Pin {
+  return { id: newId(), hsl: randomHsl() }
+}
+
 /**
  * The starting palette and settings, resolved once. A palette in the URL hash
  * wins over stored pins — a shared link should show the palette it promises.
+ * There is no empty palette: with nothing to restore, the app opens already
+ * holding one pin on a random colour.
  */
 export function useInitialState(): { pins: Pin[]; settings: Settings } {
   const [initial] = useState(() => {
     const stored = load()
     const shared = readHash(window.location.hash)
-    return { pins: shared ?? stored.pins, settings: stored.settings }
+    const pins = shared ?? stored.pins
+    return {
+      pins: pins.length > 0 ? pins : [randomPin()],
+      settings: stored.settings,
+    }
   })
   return initial
 }

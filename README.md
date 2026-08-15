@@ -42,9 +42,16 @@ action bar at the bottom of the screen. At 768px and above it flips to a
 left/right split with the bar on top, and the pinned stripes rotate from
 vertical columns to horizontal bands.
 
+**Starting colours.** The app opens on one pin in a random colour — random hue,
+with saturation and lightness held in a usable band so it never starts muddy or
+near-black. After that, `+` pins the *opposite* of whatever is selected: hue
+rotated half a turn with lightness mirrored around 50%, saturation kept.
+Lightness is mirrored rather than the hue simply rotated because a plain
+rotation does nothing at all to a grey.
+
 **Pinned pane.** Equal-width stripes, seven maximum, with an extra `+` column
-that disappears once you're full. `+` pins a stripe in the current theme colour
-straight away and points the editor at it — there is no separate confirm step.
+that disappears once you're full. `+` pins a stripe straight away and points
+the editor at it — there is no separate confirm step.
 A bar of hex codes runs along the pane edge in the app's background and text
 colours; click one to copy it to the clipboard, silently. Click a stripe to
 edit it, drag to reorder, and use the `×` on the selected stripe to remove it.
@@ -92,6 +99,10 @@ roughly 100 calls per 30 seconds before throwing. See
 
 **culori leaves hue undefined for greys**, which includes two of the three
 themes, so any read of `.h` needs a fallback.
+
+**`oppositeHsl` is its own inverse.** Applying it twice returns the original,
+so pressing `+` repeatedly without changing anything alternates between two
+colours rather than walking through new ones.
 
 **History coalescing is tag-based.** `useHistory.commit` takes an optional tag;
 successive commits sharing a tag inside 400ms overwrite the present instead of
