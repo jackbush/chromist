@@ -22,7 +22,7 @@ export const site = {
   shortName: 'Chromist',
   /** Meta description, og:description, twitter:description, manifest. */
   description:
-    'Get your colours right: build or import palettes, audit accessibility and share easily. Supports P3 colours and future accessibility standards.',
+    'Get your colours right: make palettes, audit accessibility and share easily.',
   /** Canonical origin + base path. Trailing slash required. */
   url: 'https://jackbush.github.io/chromist/',
   /** <html lang> and, in Open Graph's underscored form, og:locale. */
@@ -49,13 +49,17 @@ export const site = {
     ],
   },
 
-  /** Link preview image. PNG, because several scrapers still refuse SVG. */
+  /**
+   * Link preview image: a screenshot of the app itself, in public/. PNG,
+   * because several scrapers still refuse SVG, and 1200×630 because that is
+   * what Open Graph and Twitter's large card crop to.
+   */
   cover: {
     src: 'cover.png',
     width: 1200,
     height: 630,
     type: 'image/png',
-    alt: 'Chromist — a palette of colour swatches beside their contrast scores.',
+    alt: 'Chromist: a palette of five colours listed by hex code, beside the colour picker for the one being edited.',
   },
 
   twitter: {

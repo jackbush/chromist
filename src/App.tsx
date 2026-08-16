@@ -7,6 +7,7 @@ import { newId } from './id'
 import { clear as clearStorage, DEFAULT_SETTINGS } from './storage'
 import { useInitialState, usePersist } from './hooks/usePersistentState'
 import { useHistory } from './hooks/useHistory'
+import { useThemeColor } from './hooks/useThemeColor'
 import { PinnedPane } from './components/PinnedPane'
 import { Editor } from './components/Editor'
 import { ActionBar } from './components/ActionBar'
@@ -36,6 +37,8 @@ export function App() {
   // stays out of storage.
   const [vision, setVision] = useState<Vision>(initial.vision)
   usePersist(pins, settings, auditing, vision)
+  // The phone's own bars wear the app's theme, not the system's.
+  useThemeColor(settings.theme)
 
   const [selectedId, setSelectedId] = useState<string>(initial.pins[0].id)
 
