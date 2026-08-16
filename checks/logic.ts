@@ -8,6 +8,7 @@ import {
   distinctFrom,
 } from '../src/color'
 import { formatColourList, parseColourList } from '../src/colourList'
+import { contrastRatio, formatRatio, scoreFor } from '../src/contrast'
 import { MAX_PINS } from '../src/types'
 import { readHash, buildShareUrl } from '../src/urlHash'
 import { load, save, DEFAULT_SETTINGS } from '../src/storage'
@@ -187,6 +188,26 @@ console.log('\nundo / redo')
   for (let i = 0; i < 150; i++) long = step(long, `v${i}`)
   eq('history is capped', long.past.length, 100)
   eq('cap keeps the most recent', long.past[99], 'v148')
+}
+
+console.log('\ncontrast')
+{
+  const ratio = (a: string, b: string) => contrastRatio(hexToHsl(a)!, hexToHsl(b)!)
+
+  eq('black on white is the maximum', ratio('#000000', '#ffffff'), 21)
+  eq('a colour against itself is 1', ratio('#2e86ab', '#2e86ab'), 1)
+  eq('order does not matter', ratio('#2e86ab', '#ffffff'), ratio('#ffffff', '#2e86ab'))
+
+  eq('7 and over is AAA', scoreFor(7), 'AAA')
+  eq('just under 7 is AA', scoreFor(6.99), 'AA')
+  eq('4.5 is AA', scoreFor(4.5), 'AA')
+  eq('just under 4.5 is large-text only', scoreFor(4.49), 'AA+')
+  eq('3 is large-text only', scoreFor(3), 'AA+')
+  eq('under 3 fails outright', scoreFor(2.99), 'FAIL')
+
+  // A displayed ratio must never round its way into looking like a pass.
+  eq('the ratio rounds down', formatRatio(4.499), '4.49:1')
+  eq('the ratio keeps two places', formatRatio(21), '21.00:1')
 }
 
 console.log('\ncolour list')

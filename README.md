@@ -44,13 +44,20 @@ and up, where the stripes rotate into horizontal bands.
   reorder. The palette is never empty.
 - **Editor.** Saturation square plus hue bar, filling the pane, with an editable
   hex field above it and a trash icon to delete the selected colour.
-- **Action bar.** Share-link, edit, undo, redo, theme, reset. Undo covers
-  palette changes only, with `cmd`/`ctrl` + `Z`.
+- **Action bar.** Share-link, theme, edit, reset, undo, redo, audit. Undo covers
+  palette changes only, with `cmd`/`ctrl` + `Z`; reset is not undoable and asks
+  first.
 - **Edit.** The pencil opens the palette as text, one hex code per line, seven
   numbered lines and no more. Reading is forgiving — hash optional, any case,
   `#abc` expands — and strict about meaning: an alpha channel is refused rather
   than flattened. A bad line names itself and blocks the apply; a good apply is
   one undo step. Full screen on a phone, a centred card above 768px.
+- **Audit.** Every colour against every other, rows as backgrounds and columns
+  as the text over them. Each cell scores the pair — AAA, AA, AA+ or FAIL —
+  *set in that pair*, so a cell claiming AA has to be legible at AA to be read
+  at all, with the ratio underneath in white on black. AA+ means it passes AA
+  at large text only. The diagonal has no contrast to report, so it shows the
+  colour itself. Full screen, labels sticky on both axes.
 - **Themes.** Black (default) and White, toggled from the bar. The icon is the
   destination rather than the state: a sun on black, a crescent on white.
 
@@ -78,7 +85,7 @@ on load.
   alone.
 - **Icons are [Phosphor](https://phosphoricons.com), regular weight** (MIT),
   with the paths inlined in `components/icons.tsx` rather than installed —
-  nine icons is a short list. To add one: find it on
+  ten icons is a short list. To add one: find it on
   [phosphoricons.com](https://phosphoricons.com), copy the **regular** SVG, and
   paste its `<path>` into a new component there. Any other weight will sit at a
   different visual density beside the rest. If the list ever stops being short,
@@ -103,7 +110,9 @@ src/
   urlHash.ts     share-link encoding and decoding
   clipboard.ts   copy, with a fallback for non-secure origins
   colourList.ts  the text form of a palette: parsing, validation, formatting
-  components/    PinnedPane, Editor, ActionBar, EditColoursDialog, icons
+  contrast.ts    WCAG ratio and the four bands the audit reports
+  components/    PinnedPane, Editor, ActionBar, EditColoursDialog,
+                 ContrastAudit, icons
   hooks/         useHistory, usePersistentState, useIsDesktop
 checks/logic.ts  assertions run by `npm run check`
 ```

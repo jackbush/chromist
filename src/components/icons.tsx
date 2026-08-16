@@ -101,8 +101,27 @@ export function TrashIcon(props: IconProps) {
   )
 }
 
-/** x — reset, the one action here that throws work away. */
-export function ResetIcon(props: IconProps) {
+/** warning — the caveat the audit grid can't state in its own cells. */
+export function WarningIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <path d="M236.8,188.09,149.35,36.22h0a24.76,24.76,0,0,0-42.7,0L19.2,188.09a23.51,23.51,0,0,0,0,23.72A24.35,24.35,0,0,0,40.55,224h174.9a24.35,24.35,0,0,0,21.33-12.19A23.51,23.51,0,0,0,236.8,188.09ZM222.93,203.8a8.5,8.5,0,0,1-7.48,4.2H40.55a8.5,8.5,0,0,1-7.48-4.2,7.59,7.59,0,0,1,0-7.72L120.52,44.21a8.75,8.75,0,0,1,15,0l87.45,151.87A7.59,7.59,0,0,1,222.93,203.8ZM120,144V104a8,8,0,0,1,16,0v40a8,8,0,0,1-16,0Zm20,36a12,12,0,1,1-12-12A12,12,0,0,1,140,180Z" />
+    </Icon>
+  )
+}
+
+/** circle-half — the audit, where every pair is one colour against another. */
+export function ContrastIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <path d="M128,24A104,104,0,1,0,232,128,104.11,104.11,0,0,0,128,24Zm8,16.37a86.4,86.4,0,0,1,16,3V212.67a86.4,86.4,0,0,1-16,3Zm32,9.26a87.81,87.81,0,0,1,16,10.54V195.83a87.81,87.81,0,0,1-16,10.54ZM40,128a88.11,88.11,0,0,1,80-87.63V215.63A88.11,88.11,0,0,1,40,128Zm160,50.54V77.46a87.82,87.82,0,0,1,0,101.08Z" />
+    </Icon>
+  )
+}
+
+/** x — closing a panel. Reset uses the trash, like every other action here
+ *  that throws something away. */
+export function CloseIcon(props: IconProps) {
   return (
     <Icon {...props}>
       <path d="M205.66,194.34a8,8,0,0,1-11.32,11.32L128,139.31,61.66,205.66a8,8,0,0,1-11.32-11.32L116.69,128,50.34,61.66A8,8,0,0,1,61.66,50.34L128,116.69l66.34-66.35a8,8,0,0,1,11.32,11.32L139.31,128Z" />

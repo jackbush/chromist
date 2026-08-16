@@ -4,14 +4,16 @@ import { OTHER_THEME } from '../types'
 import { buildShareUrl } from '../urlHash'
 import { COPIED_MS, copy } from '../clipboard'
 import { EditColoursDialog } from './EditColoursDialog'
+import { ContrastAudit } from './ContrastAudit'
 import {
   ClipboardIcon,
+  ContrastIcon,
   MoonIcon,
   PencilIcon,
   RedoIcon,
-  ResetIcon,
   ShareIcon,
   SunIcon,
+  TrashIcon,
   UndoIcon,
 } from './icons'
 
@@ -39,6 +41,7 @@ export function ActionBar({
   onReset,
 }: Props) {
   const [editing, setEditing] = useState(false)
+  const [auditing, setAuditing] = useState(false)
   const [copied, setCopied] = useState(false)
   const flashTimer = useRef<number | null>(null)
 
@@ -72,12 +75,30 @@ export function ActionBar({
         <button
           type="button"
           className="bar-btn"
+          onClick={() => onSettingsChange({ ...settings, theme: OTHER_THEME[settings.theme] })}
+          aria-label={dark ? 'Switch to light mode' : 'Switch to dark mode'}
+          title={dark ? 'Switch to light mode' : 'Switch to dark mode'}
+        >
+          {dark ? <SunIcon /> : <MoonIcon />}
+        </button>
+        <button
+          type="button"
+          className="bar-btn"
           onClick={() => setEditing(true)}
           aria-haspopup="dialog"
           aria-label="Edit colours"
           title="Edit colours"
         >
           <PencilIcon />
+        </button>
+        <button
+          type="button"
+          className="bar-btn"
+          onClick={onReset}
+          aria-label="Reset everything"
+          title="Reset everything"
+        >
+          <TrashIcon />
         </button>
         <button
           type="button"
@@ -102,27 +123,20 @@ export function ActionBar({
         <button
           type="button"
           className="bar-btn"
-          onClick={() => onSettingsChange({ ...settings, theme: OTHER_THEME[settings.theme] })}
-          aria-label={dark ? 'Switch to light mode' : 'Switch to dark mode'}
-          title={dark ? 'Switch to light mode' : 'Switch to dark mode'}
+          onClick={() => setAuditing(true)}
+          aria-haspopup="dialog"
+          aria-label="Accessibility audit"
+          title="Accessibility audit"
         >
-          {dark ? <SunIcon /> : <MoonIcon />}
-        </button>
-
-        <button
-          type="button"
-          className="bar-btn"
-          onClick={onReset}
-          aria-label="Reset everything"
-          title="Reset everything"
-        >
-          <ResetIcon />
+          <ContrastIcon />
         </button>
       </div>
 
       {editing && (
         <EditColoursDialog pins={pins} onApply={onEditList} onClose={() => setEditing(false)} />
       )}
+
+      {auditing && <ContrastAudit pins={pins} onClose={() => setAuditing(false)} />}
     </header>
   )
 }

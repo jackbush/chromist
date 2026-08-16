@@ -105,7 +105,8 @@ body {
   gap: 1rem;
   padding: 0.5rem 0.75rem;
   padding-bottom: calc(0.5rem + env(safe-area-inset-bottom));
-  border-top: 1px solid var(--line);
+  /* Full strength, not the hairline: the bar is the app's edge. */
+  border-top: 1px solid var(--fg);
   background: var(--bg);
 }
 
@@ -115,6 +116,9 @@ body {
   min-width: 0;
 }
 
+/* Reads as the same line as the audit's warning: same size, same spacing, same
+   full-strength colour, an icon of the same size leading it. The two bars are
+   the same height and now carry the same voice. */
 .bar-share {
   display: flex;
   align-items: center;
@@ -123,13 +127,14 @@ body {
   margin: -0.25rem;
   letter-spacing: 0.04em;
   border-radius: 2px;
-  opacity: 0.75;
-  transition: opacity 80ms linear;
+  transition: background 80ms linear;
 }
 
+/* The label no longer dims, so hover is carried by the ground under it and by
+   the clipboard appearing beside it. */
 .bar-share:hover,
 .bar-share:focus-visible {
-  opacity: 1;
+  background: var(--hover);
 }
 
 .bar-share.is-copied {
@@ -182,9 +187,13 @@ body {
 
 /* -------------------------------------------------------------- pinned */
 
-/* No rules above or below the tiles — the colours are their own edges. */
+/* The tiles have no rules between them — the colours are their own edges — but
+   the pane is divided from the editor at the same weight as the action bar.
+   Mobile stacks, so the line lies along the foot of the palette; desktop puts
+   the panes side by side and it stands up. */
 .pins {
   display: flex;
+  border-bottom: 1px solid var(--fg);
 }
 
 .pins-track {
@@ -254,7 +263,7 @@ body {
 @keyframes share-flash {
   0%,
   100% {
-    opacity: 0.75;
+    opacity: 1;
   }
   40% {
     opacity: 0.35;
@@ -382,6 +391,9 @@ body {
 .editor-picker .react-colorful__saturation {
   border-radius: 0;
   border-bottom: 0;
+  /* The library outlines the square in 5% black. Harmless on a card, but it
+     reads as a second, weaker rule beside the pane divider. */
+  box-shadow: none;
 }
 
 .editor-picker .react-colorful__hue {
@@ -428,6 +440,20 @@ body {
 
 .dialog-note {
   font-size: 0.8125rem;
+  letter-spacing: 0.04em;
+}
+
+/* The warning sits with its text the way the clipboard sits with the share
+   label — same gap, same icon size. */
+.audit-note {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+}
+
+/* Only where it follows a heading — on its own in the audit bar it is the
+   line, and must sit centred against the close button. */
+.dialog-title + .dialog-note {
   margin-top: 0.25rem;
 }
 
@@ -525,6 +551,144 @@ body {
   cursor: default;
 }
 
+/* --------------------------------------------------------------- audit */
+
+/* The whole screen, on every size: a matrix of n² cells has nowhere smaller
+   to go. */
+.audit {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  display: flex;
+  /* Same trick as the app: the bar is first in the DOM and last on screen, so
+     the panel's controls land where the ones it replaced were. */
+  flex-direction: column-reverse;
+  /* The grid is against the top edge now, so the inset belongs to the panel. */
+  padding-top: env(safe-area-inset-top);
+  background: var(--bg);
+  color: var(--fg);
+}
+
+/* Same padding, same button and the same rule as the action bar, so the two
+   sit at the same height in the same place whichever one you're looking at. */
+.audit-bar {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.5rem 0.75rem;
+  padding-bottom: calc(0.5rem + env(safe-area-inset-bottom));
+  border-top: 1px solid var(--fg);
+}
+
+/* A size container, so the rows can be measured against the space actually
+   left over rather than against the viewport the bar is also sharing. */
+.audit-scroll {
+  flex: 1;
+  container-type: size;
+  overflow: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Deliberately not stretched to the viewport: a table told to fill its height
+   hands the slack to whichever row asks first, and every row here is worth
+   exactly as much as the others. */
+.audit-grid {
+  width: 100%;
+  border-collapse: separate; /* collapse drops borders on sticky cells */
+  border-spacing: 0;
+}
+
+/* Labels hold their edge while the grid scrolls under them, so a cell in the
+   middle of a seven-colour matrix can still say which pair it is. */
+.audit-head {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  padding: 0.375rem 0.5rem;
+  font-size: 0.6875rem;
+  font-weight: 400;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  /* The audit follows the theme: black on white in light, white on black in
+     dark. Only the palette's own colours are fixed — everything the grid says
+     *about* them is the theme's ink on the theme's paper. */
+  color: var(--fg);
+  background: var(--bg);
+  border-right: 1px solid var(--fg);
+  border-bottom: 1px solid var(--fg);
+}
+
+/* Fixed, because the row maths has to subtract it. */
+.audit-grid thead .audit-head {
+  height: 2rem;
+}
+
+.audit-grid tbody .audit-head {
+  top: auto;
+  left: 0;
+  z-index: 1;
+}
+
+.audit-corner {
+  left: 0;
+  z-index: 3;
+}
+
+/* The cell carries the row colour itself, so the column never shows a seam of
+   theme background between the score and the ratio strip. */
+.audit-cell {
+  min-width: 6.5rem;
+  padding: 0;
+  vertical-align: top;
+  /* Rules both ways: the columns run the whole way down, the rows the whole
+     way across. */
+  border-right: 1px solid var(--fg);
+  border-bottom: 1px solid var(--fg);
+}
+
+/* The verdict over the number that earned it, both centred in their own band.
+   Every row is the same height because they all resolve the same expression:
+   the space left under the header split by the number of colours, and never
+   below the floor — past which the grid scrolls instead of squeezing. Sizing
+   the band rather than the row keeps the table out of it; asked to fill a
+   height itself, it hands the surplus to whichever row asks first. */
+.audit-score {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: max(3.5rem, calc((100cqh - 2rem - 1px) / var(--rows, 1) - 1.5rem - 1px));
+  /* 14pt bold — the smaller of WCAG's two definitions of large text, and so
+     the size at which an AA+ actually holds. */
+  font-size: 1.1667rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.audit-ratio {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 1.5rem;
+  font-size: 1rem;
+  line-height: 1;
+  /* Inverted against the headings, whichever way round the theme has them. */
+  color: var(--bg);
+  background: var(--fg);
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
 /* ------------------------------------------------------------- desktop */
 
 @media (min-width: 768px) {
@@ -534,12 +698,29 @@ body {
 
   .bar {
     border-top: 0;
-    border-bottom: 1px solid var(--line);
+    border-bottom: 1px solid var(--fg);
+    padding-bottom: 0.5rem;
+  }
+
+  /* Both bars go back to the top together. */
+  .audit {
+    flex-direction: column;
+  }
+
+  .audit-bar {
+    border-top: 0;
+    border-bottom: 1px solid var(--fg);
     padding-bottom: 0.5rem;
   }
 
   .panes {
     flex-direction: row; /* pins left, editor right */
+  }
+
+  /* The divider turns with the layout. */
+  .pins {
+    border-bottom: 0;
+    border-right: 1px solid var(--fg);
   }
 
   /* Stripes rotate: horizontal bands stacked down the pane. */
