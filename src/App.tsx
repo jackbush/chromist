@@ -38,7 +38,8 @@ export function App() {
 
   /** `+` pins the opposite of whatever is selected and hands it to the editor —
    *  unless that colour is already in the palette, in which case it starts over
-   *  on a random one. */
+   *  on a random one. It lands next to the colour it came from rather than at
+   *  the end, so a pair stays a pair without a reorder. */
   const handleAdd = useCallback(() => {
     if (atCapacity) return
     const hsl = distinctFrom(
@@ -46,7 +47,8 @@ export function App() {
       pins.map((p) => p.hsl),
     )
     const pin: Pin = { id: newId(), hsl }
-    commit([...pins, pin])
+    const after = pins.findIndex((p) => p.id === selected.id) + 1
+    commit([...pins.slice(0, after), pin, ...pins.slice(after)])
     setSelectedId(pin.id)
   }, [atCapacity, commit, pins, selected])
 
