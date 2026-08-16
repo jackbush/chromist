@@ -553,6 +553,9 @@ body {
 /* ------------------------------------------------------ audit fields */
 
 .audit-field select {
+  /* A grid track will not shrink below its content without this, and these
+     carry the longest words in the app. */
+  min-width: 0;
   font: inherit;
   font-size: 0.75rem;
   padding: 0.125rem 0.25rem;
@@ -810,6 +813,17 @@ body {
   border-bottom: 1px solid var(--fg);
 }
 
+/* The table is laid out one pixel short of the scroll area — see `--row-h`,
+   which subtracts the header's rule — so the last row's own rule sat a pixel
+   clear of the action bar's, reading as two lines with a gap between them. The
+   bar's is the one that means something: it is the app's edge. This one goes.
+   On desktop nothing sits below the grid at all, so there is nothing to
+   divide from either. */
+.audit-grid tbody tr:last-child .audit-cell,
+.audit-grid tbody tr:last-child .audit-head {
+  border-bottom: 0;
+}
+
 /* The diagonal has no score to stand the row up, so it carries the height
    itself. With one colour that cell is the whole grid, and this is what makes
    it fill the pane rather than sit as a strip under the header. */
@@ -868,13 +882,18 @@ body {
 }
 
 /* Sits between the bar and the grid, out of the scroll container so it stays
-   put while the matrix moves under it. Three labelled fields is more than a
-   phone has room for on one line, so it wraps. */
+   put while the matrix moves under it.
+
+   Four labelled fields is more than a phone can hold on one line and wrapping
+   them left the columns ragged, so they are laid out rather than flowed: two
+   equal columns, and inside each the label takes what it needs and the control
+   takes the rest. Desktop has the room for a single row and goes back to one
+   below. */
 .audit-bar {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.375rem 0.75rem;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  column-gap: 24px;
+  row-gap: 0.375rem;
   padding: 0.375rem 0.5rem;
   border-bottom: 1px solid var(--fg);
 }
@@ -882,7 +901,8 @@ body {
 /* The label names the control rather than sitting loose beside it, so nothing
    in the bar has to be read as a sentence. */
 .audit-field {
-  display: flex;
+  display: grid;
+  grid-template-columns: auto 1fr;
   align-items: center;
   gap: 0.375rem;
   font-size: 0.6875rem;
@@ -906,6 +926,18 @@ body {
 @media (min-width: 768px) {
   .bar-label {
     display: inline;
+  }
+
+  /* Room for all four on one line, each at its natural width. */
+  .audit-bar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.375rem 0.75rem;
+  }
+
+  .audit-field {
+    display: flex;
   }
 
   .app {
