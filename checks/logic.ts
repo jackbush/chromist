@@ -7,6 +7,8 @@ import {
   randomHsl,
   distinctFrom,
 } from '../src/color'
+import { formatColourList, parseColourList } from '../src/colourList'
+import { MAX_PINS } from '../src/types'
 import { readHash, buildShareUrl } from '../src/urlHash'
 import { load, save, DEFAULT_SETTINGS } from '../src/storage'
 import { reducer } from '../src/hooks/useHistory'
@@ -179,6 +181,35 @@ console.log('\nundo / redo')
   for (let i = 0; i < 150; i++) long = step(long, `v${i}`)
   eq('history is capped', long.past.length, 100)
   eq('cap keeps the most recent', long.past[99], 'v148')
+}
+
+console.log('\ncolour list')
+{
+  const hexes = (text: string) => parseColourList(text).hexes
+  const errs = (text: string) => parseColourList(text).errors
+
+  eq('reads a plain list', hexes('#e4572e\n#17bebb'), ['#e4572e', '#17bebb'])
+  eq('takes codes without the hash', hexes('e4572e'), ['#e4572e'])
+  eq('lower-cases what it reads', hexes('#E4572E'), ['#e4572e'])
+  eq('expands three digits', hexes('#abc\nfff'), ['#aabbcc', '#ffffff'])
+  eq('ignores blank lines and padding', hexes('\n  #abc  \n\n'), ['#aabbcc'])
+  eq('round-trips the formatted form', hexes(formatColourList(['#e4572e'])), ['#e4572e'])
+
+  eq('rejects eight-digit alpha', errs('#e4572eff'), [
+    { line: 1, message: 'no opacity — drop the last digits' },
+  ])
+  eq('rejects four-digit alpha', errs('#abcd'), [
+    { line: 1, message: 'no opacity — drop the last digits' },
+  ])
+  eq('rejects non-hex text', errs('tomato'), [{ line: 1, message: 'not a hex colour' }])
+  eq('rejects odd lengths', errs('#abcde'), [{ line: 1, message: 'needs three or six digits' }])
+  eq('rejects an empty list', errs(' \n '), [{ line: 1, message: 'needs at least one colour' }])
+  eq('reports the failing line number', errs('#abc\n\nnope')[0].line, 3)
+  eq('holds everything back while a line is bad', hexes('#abc\nnope'), [])
+
+  const over = errs(Array(MAX_PINS + 1).fill('#abc').join('\n'))
+  eq('rejects more than the cap', over, [{ line: MAX_PINS + 1, message: `over ${MAX_PINS} colours` }])
+  eq('accepts exactly the cap', hexes(Array(MAX_PINS).fill('#abc').join('\n')).length, MAX_PINS)
 }
 
 console.log(`\n${pass} passed, ${fail} failed\n`)

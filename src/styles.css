@@ -81,8 +81,9 @@ body {
   -webkit-touch-callout: none;
 }
 
-/* The one field you type into keeps its caret and selection. */
-.app input {
+/* The fields you type into keep their caret and selection. */
+.app input,
+.app textarea {
   -webkit-user-select: text;
   user-select: text;
   -webkit-touch-callout: default;
@@ -463,6 +464,136 @@ body {
 }
 
 
+/* -------------------------------------------------------------- dialog */
+
+.dialog-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  display: flex;
+  background: rgb(0 0 0 / 0.45);
+}
+
+/* On a phone the dialog is the screen: a textarea is the whole task, and a
+   floating card would only hand the keyboard something to cover. */
+.dialog {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.875rem;
+  padding: 1rem;
+  padding-bottom: calc(1rem + env(safe-area-inset-bottom));
+  background: var(--bg);
+  color: var(--fg);
+}
+
+.dialog-title {
+  font-size: 0.6875rem;
+  font-weight: 400;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  opacity: 0.65;
+}
+
+.dialog-note {
+  font-size: 0.8125rem;
+  margin-top: 0.25rem;
+}
+
+/* Everything in here is measured in the same line box, so the numbers sit on
+   the codes without either side having to be told the other's height. */
+.dialog-field {
+  position: relative;
+  --dialog-line: 1.9;
+  --dialog-pad: 0.625rem;
+  --dialog-gutter: 2.25ch;
+}
+
+.dialog-lines {
+  position: absolute;
+  top: 0;
+  left: 0;
+  padding: calc(var(--dialog-pad) + 1px) 0 0 0.75rem;
+  list-style: none;
+  font-size: 1rem;
+  line-height: var(--dialog-line);
+  text-align: right;
+  width: calc(0.75rem + var(--dialog-gutter));
+  opacity: 0.35;
+  pointer-events: none;
+}
+
+/* Exactly as tall as the palette is long: seven lines, no scrollbar, and the
+   empty ones read as the room that's left. */
+.dialog-input {
+  flex: 0 0 auto;
+  width: 100%;
+  resize: none;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: var(--dialog-pad) 0.75rem var(--dialog-pad)
+    calc(0.75rem + var(--dialog-gutter) + 0.75ch);
+  font: inherit;
+  font-size: 1rem;
+  line-height: var(--dialog-line);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: inherit;
+  background: none;
+  border: 1px solid var(--line);
+  border-radius: 2px;
+  outline-offset: 2px;
+}
+
+.dialog-input:focus {
+  border-color: var(--fg);
+}
+
+/* No red to reach for in a three-tone palette — a bad line reads at full
+   strength against the dimmed heading instead. */
+.dialog-errors {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  list-style: none;
+  font-size: 0.75rem;
+}
+
+.dialog-errors li::before {
+  content: '! ';
+}
+
+/* Full screen on a phone leaves slack below a field that no longer stretches;
+   the buttons take it and stay at the foot. */
+.dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin-top: auto;
+}
+
+.dialog-btn {
+  padding: 0.4375rem 0.875rem;
+  font-size: 0.75rem;
+  letter-spacing: 0.04em;
+  border: 1px solid var(--line);
+  border-radius: 2px;
+}
+
+.dialog-btn:hover:not(:disabled) {
+  background: var(--hover);
+}
+
+.dialog-btn.is-primary {
+  border-color: var(--fg);
+  box-shadow: inset 0 0 0 1px var(--fg);
+}
+
+.dialog-btn:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
 /* ------------------------------------------------------------- desktop */
 
 @media (min-width: 768px) {
@@ -498,6 +629,27 @@ body {
   .popover {
     top: calc(100% + 0.5rem);
     bottom: auto;
+  }
+
+  /* Off the edges and into the middle of the screen. */
+  .dialog-backdrop {
+    align-items: center;
+    justify-content: center;
+    padding: 1.5rem;
+  }
+
+  .dialog {
+    flex: 0 1 auto;
+    width: 24rem;
+    max-height: 100%;
+    padding-bottom: 1rem;
+    border: 1px solid var(--fg);
+    border-radius: 2px;
+    box-shadow: 0 6px 24px rgb(0 0 0 / 0.3);
+  }
+
+  .dialog-actions {
+    margin-top: 0;
   }
 
   .editor-bar {

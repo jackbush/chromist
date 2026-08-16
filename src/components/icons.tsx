@@ -55,6 +55,16 @@ export function ClipboardIcon(props: IconProps) {
   )
 }
 
+/** Pencil — a 45° body on the grid's diagonal, with the nib line across it. */
+export function PencilIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <path d="M4 20v-4L16 4l4 4L8 20z" />
+      <path d="m14 6 4 4" />
+    </Icon>
+  )
+}
+
 /** Share — the iOS box-with-an-up-arrow, redrawn on the same square grid. */
 export function ShareIcon(props: IconProps) {
   return (

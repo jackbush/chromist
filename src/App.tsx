@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import type { Hsl, Pin } from './types'
 import { MAX_PINS } from './types'
-import { distinctFrom, oppositeHsl, randomHsl } from './color'
+import { distinctFrom, hexToHsl, oppositeHsl, randomHsl } from './color'
 import { newId } from './id'
 import { clear as clearStorage, DEFAULT_SETTINGS } from './storage'
 import { useInitialState, usePersist } from './hooks/usePersistentState'
@@ -79,6 +79,20 @@ export function App() {
     setSelectedId(fresh.id)
   }, [commit, pins, selected])
 
+  /** The whole palette, rewritten from the text list in one step. Ids are kept
+   *  by position so the selection survives an edit that leaves it in place. */
+  const handleEditList = useCallback(
+    (hexes: string[]) => {
+      const next: Pin[] = []
+      hexes.forEach((hex, i) => {
+        const hsl = hexToHsl(hex)
+        if (hsl) next.push({ id: pins[i]?.id ?? newId(), hsl })
+      })
+      if (next.length > 0) commit(next)
+    },
+    [commit, pins],
+  )
+
   const handleReorder = useCallback(
     (from: number, to: number) => {
       if (from === to || from < 0 || to < 0 || from >= pins.length || to >= pins.length) return
@@ -110,7 +124,8 @@ export function App() {
     const onKeyDown = (e: KeyboardEvent) => {
       const meta = e.metaKey || e.ctrlKey
       if (!meta || e.key.toLowerCase() !== 'z') return
-      // Let the field's own undo work while typing a hex code.
+      // Let the field's own undo work while typing a hex code or a list.
+      if (e.target instanceof HTMLTextAreaElement) return
       if (e.target instanceof HTMLInputElement && e.target.type === 'text') return
       e.preventDefault()
       if (e.shiftKey) redo()
@@ -126,6 +141,7 @@ export function App() {
         pins={pins}
         settings={settings}
         onSettingsChange={setSettings}
+        onEditList={handleEditList}
         canUndo={canUndo}
         canRedo={canRedo}
         onUndo={undo}

@@ -3,12 +3,22 @@ import type { Pin, Settings } from '../types'
 import { buildShareUrl } from '../urlHash'
 import { COPIED_MS, copy } from '../clipboard'
 import { SettingsPopover } from './SettingsPopover'
-import { ClipboardIcon, RedoIcon, ResetIcon, SettingsIcon, ShareIcon, UndoIcon } from './icons'
+import { EditColoursDialog } from './EditColoursDialog'
+import {
+  ClipboardIcon,
+  PencilIcon,
+  RedoIcon,
+  ResetIcon,
+  SettingsIcon,
+  ShareIcon,
+  UndoIcon,
+} from './icons'
 
 type Props = {
   pins: Pin[]
   settings: Settings
   onSettingsChange: (settings: Settings) => void
+  onEditList: (hexes: string[]) => void
   canUndo: boolean
   canRedo: boolean
   onUndo: () => void
@@ -20,6 +30,7 @@ export function ActionBar({
   pins,
   settings,
   onSettingsChange,
+  onEditList,
   canUndo,
   canRedo,
   onUndo,
@@ -27,6 +38,7 @@ export function ActionBar({
   onReset,
 }: Props) {
   const [open, setOpen] = useState(false)
+  const [editing, setEditing] = useState(false)
   const [copied, setCopied] = useState(false)
   const wrapRef = useRef<HTMLDivElement>(null)
   const flashTimer = useRef<number | null>(null)
@@ -75,6 +87,16 @@ export function ActionBar({
         <button
           type="button"
           className="bar-btn"
+          onClick={() => setEditing(true)}
+          aria-haspopup="dialog"
+          aria-label="Edit colours"
+          title="Edit colours"
+        >
+          <PencilIcon />
+        </button>
+        <button
+          type="button"
+          className="bar-btn"
           onClick={onUndo}
           disabled={!canUndo}
           aria-label="Undo"
@@ -116,6 +138,10 @@ export function ActionBar({
           <ResetIcon />
         </button>
       </div>
+
+      {editing && (
+        <EditColoursDialog pins={pins} onApply={onEditList} onClose={() => setEditing(false)} />
+      )}
     </header>
   )
 }
