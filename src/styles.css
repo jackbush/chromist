@@ -15,6 +15,11 @@ html,
 body,
 #root {
   height: 100%;
+  /* The app is exactly one viewport and manages its own scrolling. Without this
+     a wide audit grid gives the *document* something to scroll, and dragging
+     sideways — or overscrolling past the end of the grid — carries the whole
+     app off screen with it. */
+  overflow: hidden;
 }
 
 button {
@@ -86,6 +91,7 @@ body {
   display: flex;
   flex-direction: column;
   min-height: 0;
+  min-width: 0;
 }
 
 .pins,
@@ -144,7 +150,17 @@ body {
   padding-right: 0.125rem;
 }
 
-.bar-btn:hover:not(:disabled) {
+/* Hover only where there is a pointer that can leave again. A touch device
+   keeps `:hover` on the last thing tapped until something else is tapped, so
+   these read as stuck. The press feedback is `:active`, which ends with the
+   finger — same look, and it clears itself. */
+@media (hover: hover) {
+  .bar-btn:hover:not(:disabled) {
+    background: var(--hover);
+  }
+}
+
+.bar-btn:not(.is-active):active:not(:disabled) {
   background: var(--hover);
 }
 
@@ -158,7 +174,8 @@ body {
 }
 
 /* A mode you are in, marked the same way the selected colour is: the cell
-   inverts. Hover has nothing left to say on it, so it says nothing. */
+   inverts. Hover has nothing left to say on it, so it says nothing — and nor
+   does a press, which is why the rule above excludes it. */
 .bar-btn.is-active,
 .bar-btn.is-active:hover:not(:disabled) {
   background: var(--fg);
@@ -385,7 +402,14 @@ body {
   opacity: 0.7;
 }
 
-.pin-swatch-add:hover {
+@media (hover: hover) {
+  .pin-swatch-add:hover {
+    opacity: 1;
+    background: var(--hover);
+  }
+}
+
+.pin-swatch-add:active {
   opacity: 1;
   background: var(--hover);
 }
@@ -460,7 +484,13 @@ body {
   border-left: 1px solid var(--fg);
 }
 
-.editor-copy:hover {
+@media (hover: hover) {
+  .editor-copy:hover {
+    background: var(--hover);
+  }
+}
+
+.editor-copy:active {
   background: var(--hover);
 }
 
@@ -685,7 +715,13 @@ body {
   border-radius: 2px;
 }
 
-.dialog-btn:hover:not(:disabled) {
+@media (hover: hover) {
+  .dialog-btn:hover:not(:disabled) {
+    background: var(--hover);
+  }
+}
+
+.dialog-btn:active:not(:disabled) {
   background: var(--hover);
 }
 
@@ -709,15 +745,22 @@ body {
   display: flex;
   flex-direction: column;
   min-height: 0;
+  /* A flex item will not shrink below its content unless told to, and the grid
+     inside is deliberately wider than the screen. Without this the audit pushes
+     the app out to the width of the table. */
+  min-width: 0;
 }
 
 /* A size container, so the rows can be measured against the space actually
    left over rather than against the bar it is sharing the screen with. */
 .audit-scroll {
   flex: 1;
+  min-width: 0;
   container-type: size;
   overflow: auto;
   -webkit-overflow-scrolling: touch;
+  /* Reaching the end of the grid ends the gesture rather than handing it on. */
+  overscroll-behavior: contain;
 }
 
 /* Deliberately not stretched to the viewport: a table told to fill its height
