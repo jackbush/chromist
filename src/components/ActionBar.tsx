@@ -3,6 +3,7 @@ import type { Colour, Pin, Settings } from '../types'
 import type { Vision } from '../cvd'
 import { OTHER_THEME } from '../types'
 import { buildShareUrl } from '../urlHash'
+import { site } from '../../site.config'
 import { COPIED_MS, copy } from '../clipboard'
 import { EditColoursDialog } from './EditColoursDialog'
 import {
@@ -77,7 +78,7 @@ export function ActionBar({
 
   return (
     <header className="bar">
-      <h1 className="bar-title">Chromist</h1>
+      <h1 className="bar-title">{site.name}</h1>
 
       {/* Read left to right: the three ways of working on the palette, then
           reset, then the pair for taking an edit back and the theme switch.
