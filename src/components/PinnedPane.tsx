@@ -3,6 +3,7 @@ import type { Pin } from '../types'
 import { hslToCss, hslToHex } from '../color'
 import { copy } from '../clipboard'
 import { useIsDesktop } from '../hooks/useIsDesktop'
+import { ClipboardIcon } from './icons'
 
 type Props = {
   pins: Pin[]
@@ -101,6 +102,7 @@ export function PinnedPane({ pins, selectedId, showAdd, onSelect, onAdd, onReord
                 title="Copy to clipboard"
               >
                 {hex.toUpperCase()}
+                <ClipboardIcon size={11} />
               </button>
               <div
                 className="pin-swatch"
@@ -127,10 +129,11 @@ export function PinnedPane({ pins, selectedId, showAdd, onSelect, onAdd, onReord
           )
         })}
 
+        {/* The add column has no hex cell of its own — the button runs the full
+            height of the pane, through the space the hex bar occupies on the
+            other columns. */}
         {showAdd && (
           <div className="pin pin-add">
-            {/* Keeps the add column's swatch aligned with the others. */}
-            <div className="pin-hex pin-hex-blank" aria-hidden="true" />
             <button
               type="button"
               className="pin-swatch pin-swatch-add"

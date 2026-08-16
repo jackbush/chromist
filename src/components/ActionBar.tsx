@@ -1,6 +1,9 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import type { Pin, Settings } from '../types'
+import { buildShareUrl } from '../urlHash'
+import { copy } from '../clipboard'
 import { SettingsPopover } from './SettingsPopover'
+import { ClipboardIcon, RedoIcon, ResetIcon, SettingsIcon, UndoIcon } from './icons'
 
 type Props = {
   pins: Pin[]
@@ -10,6 +13,7 @@ type Props = {
   canRedo: boolean
   onUndo: () => void
   onRedo: () => void
+  onReset: () => void
 }
 
 export function ActionBar({
@@ -20,9 +24,12 @@ export function ActionBar({
   canRedo,
   onUndo,
   onRedo,
+  onReset,
 }: Props) {
   const [open, setOpen] = useState(false)
+  const [copied, setCopied] = useState(false)
   const wrapRef = useRef<HTMLDivElement>(null)
+  const flashTimer = useRef<number | null>(null)
 
   useEffect(() => {
     if (!open) return
@@ -42,9 +49,26 @@ export function ActionBar({
     }
   }, [open])
 
+  const handleCopyLink = useCallback(async () => {
+    await copy(buildShareUrl(pins))
+    setCopied(true)
+    if (flashTimer.current) window.clearTimeout(flashTimer.current)
+    flashTimer.current = window.setTimeout(() => setCopied(false), 400)
+  }, [pins])
+
   return (
     <header className="bar">
-      <h1 className="bar-title">palette</h1>
+      <h1 className="bar-title">
+        <button
+          type="button"
+          className={`bar-share${copied ? ' is-copied' : ''}`}
+          onClick={handleCopyLink}
+          title="Copy a link to this palette"
+        >
+          Share this palette
+          <ClipboardIcon size={14} />
+        </button>
+      </h1>
 
       <div className="bar-actions">
         <button
@@ -55,19 +79,18 @@ export function ActionBar({
           aria-label="Undo"
           title="Undo"
         >
-          <Arrow />
+          <UndoIcon />
         </button>
         <button
           type="button"
-          className="bar-btn is-flipped"
+          className="bar-btn"
           onClick={onRedo}
           disabled={!canRedo}
           aria-label="Redo"
           title="Redo"
         >
-          <Arrow />
+          <RedoIcon />
         </button>
-
         <div className="bar-settings" ref={wrapRef}>
           <button
             type="button"
@@ -77,60 +100,21 @@ export function ActionBar({
             aria-haspopup="dialog"
             onClick={() => setOpen((v) => !v)}
           >
-            <Cog />
+            <SettingsIcon />
           </button>
-          {open && (
-            <SettingsPopover pins={pins} settings={settings} onChange={onSettingsChange} />
-          )}
+          {open && <SettingsPopover settings={settings} onChange={onSettingsChange} />}
         </div>
+
+        <button
+          type="button"
+          className="bar-btn"
+          onClick={onReset}
+          aria-label="Reset everything"
+          title="Reset everything"
+        >
+          <ResetIcon />
+        </button>
       </div>
     </header>
-  )
-}
-
-/** Points left; the redo button mirrors it with a CSS transform. */
-function Arrow() {
-  return (
-    <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false">
-      <path
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.8"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        d="M9 14 4 9l5-5"
-      />
-      <path
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.8"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        d="M4 9h9a7 7 0 0 1 0 14h-3"
-      />
-    </svg>
-  )
-}
-
-function Cog() {
-  return (
-    <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false">
-      <path
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.6"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z"
-      />
-      <path
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.6"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z"
-      />
-    </svg>
   )
 }

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { HslColorPicker } from 'react-colorful'
 import type { Hsl } from '../types'
 import { hexToHsl, hslToHex } from '../color'
+import { TrashIcon } from './icons'
 
 type Props = {
   colour: Hsl
@@ -72,7 +73,7 @@ export function Editor({ colour, onChange, onDelete }: Props) {
           aria-label={`Remove colour ${hex}`}
           title="Remove colour"
         >
-          <Trash />
+          <TrashIcon />
         </button>
       </div>
 
@@ -83,17 +84,3 @@ export function Editor({ colour, onChange, onDelete }: Props) {
   )
 }
 
-function Trash() {
-  return (
-    <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" focusable="false">
-      <path
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.6"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        d="M4 7h16M10 7V5a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v2M6 7l1 12a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1l1-12M10 11v6M14 11v6"
-      />
-    </svg>
-  )
-}

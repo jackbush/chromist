@@ -1,20 +1,16 @@
-import { useEffect, useRef, useState } from 'react'
-import type { Pin, Settings, ThemeName } from '../types'
+import { useEffect, useRef } from 'react'
+import type { Settings, ThemeName } from '../types'
 import { THEMES } from '../types'
-import { buildShareUrl } from '../urlHash'
-import { copy } from '../clipboard'
 
 type Props = {
-  pins: Pin[]
   settings: Settings
   onChange: (settings: Settings) => void
 }
 
-const THEME_ORDER: ThemeName[] = ['neutral', 'black', 'white']
+const THEME_ORDER: ThemeName[] = ['black', 'neutral', 'white']
 
-export function SettingsPopover({ pins, settings, onChange }: Props) {
+export function SettingsPopover({ settings, onChange }: Props) {
   const ref = useRef<HTMLDivElement>(null)
-  const [shared, setShared] = useState(false)
 
   // Move focus in on open so Escape and tabbing behave like a real dialog.
   useEffect(() => {
@@ -38,22 +34,6 @@ export function SettingsPopover({ pins, settings, onChange }: Props) {
             </button>
           ))}
         </div>
-      </fieldset>
-
-      <fieldset className="popover-group">
-        <legend>Palette</legend>
-        <button
-          type="button"
-          className="opt opt-wide"
-          disabled={pins.length === 0}
-          onClick={async () => {
-            const ok = await copy(buildShareUrl(pins))
-            setShared(ok)
-            window.setTimeout(() => setShared(false), 1200)
-          }}
-        >
-          {shared ? 'link copied' : 'copy share link'}
-        </button>
       </fieldset>
     </div>
   )

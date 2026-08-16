@@ -51,6 +51,25 @@ export function randomHsl(): Hsl {
   }
 }
 
+/**
+ * Keeps a new colour from duplicating one already in the palette — pressing `+`
+ * twice would otherwise land back on the first colour, since the opposite of an
+ * opposite is the original. Falls back to a fresh random colour, the same rule
+ * the app starts on. Comparison is by hex, which is what the user actually sees.
+ */
+export function distinctFrom(candidate: Hsl, existing: Hsl[]): Hsl {
+  const taken = new Set(existing.map(hslToHex))
+  if (!taken.has(hslToHex(candidate))) return candidate
+
+  // With at most 7 pins a free colour is found almost immediately; the bound is
+  // only here so this can never spin.
+  for (let i = 0; i < 50; i++) {
+    const fresh = randomHsl()
+    if (!taken.has(hslToHex(fresh))) return fresh
+  }
+  return randomHsl()
+}
+
 /** Bare six-digit hex, no leading hash — the form used in the share URL. */
 export function toBareHex(hsl: Hsl): string {
   return hslToHex(hsl).slice(1)

@@ -9,6 +9,7 @@ type State<T> = { past: T[]; present: T; future: T[] }
 
 type Action<T> =
   | { type: 'commit'; next: T; coalesce: boolean }
+  | { type: 'reset'; next: T }
   | { type: 'undo' }
   | { type: 'redo' }
 
@@ -21,6 +22,10 @@ export function reducer<T>(state: State<T>, action: Action<T>): State<T> {
       // A coalesced commit overwrites the present without deepening history.
       if (action.coalesce) return { past, present: action.next, future: [] }
       return { past: [...past, present].slice(-LIMIT), present: action.next, future: [] }
+
+    // A reset is a fresh start, so there is nothing left to step back into.
+    case 'reset':
+      return { past: [], present: action.next, future: [] }
 
     case 'undo': {
       if (past.length === 0) return state
@@ -57,6 +62,11 @@ export function useHistory<T>(initial: T) {
     dispatch({ type: 'commit', next, coalesce })
   }, [])
 
+  const reset = useCallback((next: T) => {
+    lastTag.current = null
+    dispatch({ type: 'reset', next })
+  }, [])
+
   // Undo/redo must not be swallowed by a still-open coalescing window.
   const undo = useCallback(() => {
     lastTag.current = null
@@ -71,6 +81,7 @@ export function useHistory<T>(initial: T) {
   return {
     present: state.present,
     commit,
+    reset,
     undo,
     redo,
     canUndo: state.past.length > 0,

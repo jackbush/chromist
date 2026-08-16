@@ -1,4 +1,12 @@
-import { hexToHsl, hslToHex, hslEquals, toBareHex, oppositeHsl, randomHsl } from '../src/color'
+import {
+  hexToHsl,
+  hslToHex,
+  hslEquals,
+  toBareHex,
+  oppositeHsl,
+  randomHsl,
+  distinctFrom,
+} from '../src/color'
 import { readHash, buildShareUrl } from '../src/urlHash'
 import { load, save, DEFAULT_SETTINGS } from '../src/storage'
 import { reducer } from '../src/hooks/useHistory'
@@ -61,6 +69,34 @@ console.log('\nrandom start colour')
   eq('hues actually vary', new Set(samples.map((c) => Math.round(c.h))).size > 100, true)
 }
 
+console.log('\nno duplicate colours')
+{
+  const hsl = (hex: string) => hexToHsl(hex)!
+  const blue = hsl('#2e86ab')
+  const opposite = oppositeHsl(blue)
+
+  eq(
+    'a free colour is used as-is',
+    hslToHex(distinctFrom(opposite, [blue])),
+    hslToHex(opposite),
+  )
+
+  // The case this exists for: + twice in a row, where the second opposite is
+  // the original colour again.
+  const again = oppositeHsl(opposite)
+  eq('a colour already pinned is replaced', hslToHex(distinctFrom(again, [blue, opposite])) !== hslToHex(blue), true)
+
+  const full = ['#2e86ab', '#ff5733', '#f6f5ae', '#4d4d4d', '#000000', '#ffffff', '#00ff88'].map(hsl)
+  for (let i = 0; i < 200; i++) {
+    const out = hslToHex(distinctFrom(full[i % full.length], full))
+    if (full.some((c) => hslToHex(c) === out)) {
+      eq('replacement never collides with a full palette', out, 'something unused')
+      break
+    }
+  }
+  eq('replacement never collides with a full palette', true, true)
+}
+
 console.log('\nurl hash')
 eq('empty hash -> null', readHash(''), null)
 eq('unrelated hash -> null', readHash('#other=1'), null)
@@ -82,6 +118,7 @@ const store = new Map<string, string>()
   getItem: (k: string) => store.get(k) ?? null,
   setItem: (k: string, v: string) => store.set(k, v),
 }
+eq('default theme is black', DEFAULT_SETTINGS.theme, 'black')
 eq('empty storage -> defaults', load(), { pins: [], settings: DEFAULT_SETTINGS })
 store.set('palette-builder.v1', '{ not json')
 eq('corrupt json -> defaults', load(), { pins: [], settings: DEFAULT_SETTINGS })
@@ -98,8 +135,8 @@ store.set(
 )
 const loaded = load()
 eq('malformed pins filtered out', loaded.pins.length, 1)
-eq('unknown theme falls back', loaded.settings.theme, 'neutral')
-eq('settings from older builds drop unknown keys', loaded.settings, { theme: 'neutral' })
+eq('unknown theme falls back to the default', loaded.settings.theme, DEFAULT_SETTINGS.theme)
+eq('settings from older builds drop unknown keys', loaded.settings, DEFAULT_SETTINGS)
 save({ pins: [{ id: 'a', hsl: { h: 1, s: 2, l: 3 } }], settings: DEFAULT_SETTINGS })
 eq('save round trips', load().pins[0].id, 'a')
 
@@ -134,6 +171,9 @@ console.log('\nundo / redo')
     reducer(coalesced, { type: 'undo' }).present,
     'a',
   )
+
+  const afterReset = reducer(step(step(start, 'b'), 'c'), { type: 'reset', next: 'z' })
+  eq('reset clears the whole stack', afterReset, { past: [], present: 'z', future: [] })
 
   let long = start
   for (let i = 0; i < 150; i++) long = step(long, `v${i}`)

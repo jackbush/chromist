@@ -5,7 +5,7 @@ const KEY = 'palette-builder.v1'
 
 type Stored = { pins: Pin[]; settings: Settings }
 
-export const DEFAULT_SETTINGS: Settings = { theme: 'neutral' }
+export const DEFAULT_SETTINGS: Settings = { theme: 'black' }
 
 function isHsl(v: unknown): v is Pin['hsl'] {
   if (typeof v !== 'object' || v === null) return false
@@ -59,6 +59,14 @@ export function load(): Stored {
     return { pins, settings: { theme } }
   } catch {
     return fallback
+  }
+}
+
+export function clear(): void {
+  try {
+    localStorage.removeItem(KEY)
+  } catch {
+    // Nothing to do — the reset still applies to the running app.
   }
 }
 
