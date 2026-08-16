@@ -452,6 +452,18 @@ body {
   .editor-bar {
     padding: 0.75rem;
   }
+
+  /* The hue slider is pinned to the add column opposite it: both are one
+     seventh of the pane and both sit at its foot, so their edges line up.
+     Measured against the pane rather than the picker, which is short by the
+     hex bar above it. */
+  .editor {
+    container-type: size;
+  }
+
+  .editor-picker .react-colorful__hue {
+    height: calc(100cqh / 7);
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
