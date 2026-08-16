@@ -72,6 +72,20 @@ body {
   background: var(--bg);
   color: var(--fg);
   overflow: hidden;
+
+  /* Nothing here is prose: every code copies on a tap, so a press that dwells
+     is a drag, never a selection. Without this iOS answers a held swatch with
+     a selection and a callout, both of which fight the reorder. */
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+
+/* The one field you type into keeps its caret and selection. */
+.app input {
+  -webkit-user-select: text;
+  user-select: text;
+  -webkit-touch-callout: default;
 }
 
 .panes {
