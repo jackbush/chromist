@@ -613,9 +613,27 @@ body {
   flex-direction: column;
   gap: 0.875rem;
   padding: 1rem;
-  padding-bottom: calc(1rem + env(safe-area-inset-bottom));
+  /* --keyboard-inset is what the on-screen keyboard is covering (see
+     useKeyboardInset): iOS leaves the dialog its full height and puts the
+     keyboard on top, so the foot of the dialog steps up out of its way. The
+     home indicator is under the keyboard while it's open, hence max() rather
+     than a sum. */
+  padding-bottom: calc(1rem + max(env(safe-area-inset-bottom), var(--keyboard-inset, 0px)));
   background: var(--bg);
   color: var(--fg);
+  overflow: hidden;
+}
+
+/* The part that gives: with the keyboard up there may be less room than the
+   field and its notes want, and the buttons below are not the ones to lose. */
+.dialog-body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.875rem;
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
 .dialog-title {
@@ -698,13 +716,13 @@ body {
   content: '! ';
 }
 
-/* Full screen on a phone leaves slack below a field that no longer stretches;
-   the buttons take it and stay at the foot. */
+/* Held at the foot of the dialog by .dialog-body taking the slack above them,
+   and kept there whatever the field does. */
 .dialog-actions {
   display: flex;
   justify-content: flex-end;
   gap: 0.5rem;
-  margin-top: auto;
+  flex: 0 0 auto;
 }
 
 .dialog-btn {
