@@ -185,6 +185,14 @@ body {
   opacity: 0.35;
 }
 
+/* A mode you are in, marked the same way the selected colour is: the cell
+   inverts. Hover has nothing left to say on it, so it says nothing. */
+.bar-btn.is-active,
+.bar-btn.is-active:hover:not(:disabled) {
+  background: var(--fg);
+  color: var(--bg);
+}
+
 /* -------------------------------------------------------------- pinned */
 
 /* The tiles have no rules between them — the colours are their own edges — but
@@ -450,16 +458,6 @@ body {
   letter-spacing: 0.04em;
 }
 
-/* The warning sits with its text the way the clipboard sits with the share
-   label — same gap, same icon size. */
-.audit-note {
-  display: flex;
-  align-items: center;
-  gap: 0.375rem;
-}
-
-/* Only where it follows a heading — on its own in the audit bar it is the
-   line, and must sit centred against the close button. */
 .dialog-title + .dialog-note {
   margin-top: 0.25rem;
 }
@@ -560,37 +558,17 @@ body {
 
 /* --------------------------------------------------------------- audit */
 
-/* The whole screen, on every size: a matrix of n² cells has nowhere smaller
-   to go. */
+/* Takes the panes' place rather than covering them: everything the panes had —
+   all the room under the bar, on every size — and nothing the bar had. A matrix
+   of n² cells has nowhere smaller to go. */
 .audit {
-  position: fixed;
-  inset: 0;
-  z-index: 20;
+  flex: 1;
   display: flex;
-  /* Same trick as the app: the bar is first in the DOM and last on screen, so
-     the panel's controls land where the ones it replaced were. */
-  flex-direction: column-reverse;
-  /* The grid is against the top edge now, so the inset belongs to the panel. */
-  padding-top: env(safe-area-inset-top);
-  background: var(--bg);
-  color: var(--fg);
-}
-
-/* Same padding, same button and the same rule as the action bar, so the two
-   sit at the same height in the same place whichever one you're looking at. */
-.audit-bar {
-  flex: 0 0 auto;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
-  padding: 0.5rem 0.75rem;
-  padding-bottom: calc(0.5rem + env(safe-area-inset-bottom));
-  border-top: 1px solid var(--fg);
+  min-height: 0;
 }
 
 /* A size container, so the rows can be measured against the space actually
-   left over rather than against the viewport the bar is also sharing. */
+   left over rather than against the bar it is sharing the screen with. */
 .audit-scroll {
   flex: 1;
   container-type: size;
@@ -697,9 +675,10 @@ body {
   height: 1.5rem;
   font-size: 1rem;
   line-height: 1;
-  /* Inverted against the headings, whichever way round the theme has them. */
-  color: var(--bg);
-  background: var(--fg);
+  /* The theme's ink on the theme's paper, same as the headings: the palette's
+     own colours are the only thing in the grid that isn't. */
+  color: var(--fg);
+  background: var(--bg);
 }
 
 .visually-hidden {
@@ -721,17 +700,6 @@ body {
   }
 
   .bar {
-    border-top: 0;
-    border-bottom: 1px solid var(--fg);
-    padding-bottom: 0.5rem;
-  }
-
-  /* Both bars go back to the top together. */
-  .audit {
-    flex-direction: column;
-  }
-
-  .audit-bar {
     border-top: 0;
     border-bottom: 1px solid var(--fg);
     padding-bottom: 0.5rem;

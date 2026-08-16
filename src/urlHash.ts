@@ -26,15 +26,29 @@ export function readHash(hash: string): Pin[] | null {
   return pins.length > 0 ? pins : null
 }
 
-export function buildShareUrl(pins: Pin[]): string {
+/** The audit is a mode the app can be in rather than a window over it, so a
+ *  link can carry it: `#p=aabbcc,ddeeff&a=1` opens on the grid. */
+export function readAudit(hash: string): boolean {
+  const q = hash.replace(/^#/, '')
+  if (!q) return false
+  return new URLSearchParams(q).get('a') === '1'
+}
+
+/** One spelling of the hash, so the address bar and the share link can never
+ *  disagree about what the app is currently showing. */
+function hashFor(pins: Pin[], audit: boolean): string {
+  if (pins.length === 0) return ''
+  const p = pins.map((pin) => toBareHex(pin.hsl)).join(',')
+  return `#p=${p}${audit ? '&a=1' : ''}`
+}
+
+export function buildShareUrl(pins: Pin[], audit = false): string {
   const { origin, pathname } = window.location
-  if (pins.length === 0) return `${origin}${pathname}`
-  return `${origin}${pathname}#p=${pins.map((p) => toBareHex(p.hsl)).join(',')}`
+  return `${origin}${pathname}${hashFor(pins, audit)}`
 }
 
 /** Keeps the address bar in step with the palette without adding history entries. */
-export function syncHash(pins: Pin[]): void {
-  const hash = pins.length > 0 ? `#p=${pins.map((p) => toBareHex(p.hsl)).join(',')}` : ''
-  const next = `${window.location.pathname}${window.location.search}${hash}`
+export function syncHash(pins: Pin[], audit: boolean): void {
+  const next = `${window.location.pathname}${window.location.search}${hashFor(pins, audit)}`
   window.history.replaceState(null, '', next)
 }

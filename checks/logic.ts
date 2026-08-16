@@ -10,7 +10,7 @@ import {
 import { formatColourList, parseColourList } from '../src/colourList'
 import { contrastRatio, formatRatio, scoreFor } from '../src/contrast'
 import { MAX_PINS } from '../src/types'
-import { readHash, buildShareUrl } from '../src/urlHash'
+import { readHash, readAudit, buildShareUrl } from '../src/urlHash'
 import { load, save, DEFAULT_SETTINGS } from '../src/storage'
 import { reducer } from '../src/hooks/useHistory'
 
@@ -110,10 +110,17 @@ eq('first parsed correctly', three?.[0].hsl, { h: 0, s: 100, l: 50 })
 eq('ids are unique', new Set(three?.map((p) => p.id)).size, 3)
 eq('capped at 7', readHash('#p=' + Array(12).fill('ff0000').join(','))?.length, 7)
 eq('mixed valid/invalid keeps valid', readHash('#p=ff0000,xx,00ff00')?.length, 2)
+eq('audit flag read', readAudit('#p=ff0000&a=1'), true)
+eq('no audit flag', readAudit('#p=ff0000'), false)
+eq('audit flag must be 1', readAudit('#p=ff0000&a=yes'), false)
+eq('empty hash has no audit flag', readAudit(''), false)
 
 ;(globalThis as any).window = { location: { origin: 'https://x.test', pathname: '/' } }
 eq('share url', buildShareUrl(three!), 'https://x.test/#p=ff0000,00ff00,0000ff')
 eq('share url with no pins', buildShareUrl([]), 'https://x.test/')
+eq('audit share url', buildShareUrl(three!, true), 'https://x.test/#p=ff0000,00ff00,0000ff&a=1')
+eq('audit share url with no pins', buildShareUrl([], true), 'https://x.test/')
+eq('audit share url round trips', readAudit(buildShareUrl(three!, true).split('#')[1]), true)
 
 console.log('\nstorage validation')
 const store = new Map<string, string>()

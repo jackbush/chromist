@@ -2,11 +2,10 @@ import { useEffect } from 'react'
 import type { Pin } from '../types'
 import { hslToCss, hslToHex } from '../color'
 import { contrastRatio, formatRatio, scoreFor } from '../contrast'
-import { CloseIcon, WarningIcon } from './icons'
 
 type Props = {
   pins: Pin[]
-  onClose: () => void
+  onExit: () => void
 }
 
 /**
@@ -14,32 +13,30 @@ type Props = {
  * laid over them. The scores are set in the colours they describe rather than
  * beside a swatch of them, so the grid is its own evidence — a cell that says
  * AA has to be legible at AA to be read at all.
+ *
+ * This takes the place of the palette panes rather than covering them: the
+ * action bar above stays live, so a colour can be edited, undone or shared
+ * without leaving the reading of it.
  */
-export function ContrastAudit({ pins, onClose }: Props) {
+export function ContrastAudit({ pins, onExit }: Props) {
+  // Nothing is trapped here, but escape means the same as it does everywhere
+  // else in the app: back to where you were.
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose()
+      if (e.key !== 'Escape') return
+      // The bar still works from in here, so a dialog can be open over the
+      // grid. It answers escape first, and alone — one press, one step back.
+      if (document.querySelector('.dialog-backdrop')) return
+      onExit()
     }
     document.addEventListener('keydown', onKeyDown)
     return () => document.removeEventListener('keydown', onKeyDown)
-  }, [onClose])
+  }, [onExit])
 
   const hexes = pins.map((p) => hslToHex(p.hsl).toUpperCase())
 
   return (
-    <div className="audit" role="dialog" aria-modal="true" aria-label="Accessibility audit">
-      <header className="audit-bar">
-        {/* The panel is named to assistive tech by the dialog's own label, so
-            the one line here is spent on the thing the grid can't say itself. */}
-        <p className="dialog-note audit-note">
-          <WarningIcon size={14} />
-          AA+ passes AA at large size only.
-        </p>
-        <button type="button" className="bar-btn" onClick={onClose} aria-label="Close">
-          <CloseIcon />
-        </button>
-      </header>
-
+    <main className="audit" aria-label="Accessibility audit">
       {/* The one scroll container in the app: on a phone a seven-colour grid
           runs off both edges, and the labels stay put while it does. */}
       <div className="audit-scroll">
@@ -97,6 +94,6 @@ export function ContrastAudit({ pins, onClose }: Props) {
           </tbody>
         </table>
       </div>
-    </div>
+    </main>
   )
 }

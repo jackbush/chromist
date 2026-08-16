@@ -9,6 +9,7 @@ import { useHistory } from './hooks/useHistory'
 import { PinnedPane } from './components/PinnedPane'
 import { Editor } from './components/Editor'
 import { ActionBar } from './components/ActionBar'
+import { ContrastAudit } from './components/ContrastAudit'
 
 export function App() {
   const initial = useInitialState()
@@ -23,7 +24,12 @@ export function App() {
     canRedo,
   } = useHistory<Pin[]>(initial.pins)
   const [settings, setSettings] = useState(initial.settings)
-  usePersist(pins, settings)
+
+  // The audit is a second way of looking at the same palette rather than a
+  // window over it: the bar keeps working, and every edit made from it lands on
+  // the grid straight away.
+  const [auditing, setAuditing] = useState(initial.audit)
+  usePersist(pins, settings, auditing)
 
   const [selectedId, setSelectedId] = useState<string>(initial.pins[0].id)
 
@@ -149,18 +155,24 @@ export function App() {
         onUndo={undo}
         onRedo={redo}
         onReset={handleReset}
+        auditing={auditing}
+        onToggleAudit={() => setAuditing((on) => !on)}
       />
-      <main className="panes">
-        <PinnedPane
-          pins={pins}
-          selectedId={selected.id}
-          showAdd={!atCapacity}
-          onSelect={setSelectedId}
-          onAdd={handleAdd}
-          onReorder={handleReorder}
-        />
-        <Editor colour={selected.hsl} onChange={handleChange} onDelete={handleDeleteSelected} />
-      </main>
+      {auditing ? (
+        <ContrastAudit pins={pins} onExit={() => setAuditing(false)} />
+      ) : (
+        <main className="panes">
+          <PinnedPane
+            pins={pins}
+            selectedId={selected.id}
+            showAdd={!atCapacity}
+            onSelect={setSelectedId}
+            onAdd={handleAdd}
+            onReorder={handleReorder}
+          />
+          <Editor colour={selected.hsl} onChange={handleChange} onDelete={handleDeleteSelected} />
+        </main>
+      )}
     </div>
   )
 }
