@@ -98,8 +98,6 @@ export function AuditSettingsDialog({
     <Modal
       title="Accessibility audit settings"
       titleId="audit-settings-title"
-      note="Changes show on the grid straight away"
-      noteId="audit-settings-note"
       onClose={onClose}
       actions={
         <button type="button" className="dialog-btn is-primary" onClick={onClose}>

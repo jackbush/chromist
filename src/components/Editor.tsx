@@ -173,7 +173,7 @@ export function Editor({ colour, mode: modeId, onChange, onModeChange }: Props) 
             aria-label={`Copy ${text}`}
             title="Copy this value"
           >
-            <ClipboardIcon size={14} />
+            <ClipboardIcon size={18} />
           </button>
         </div>
       </div>

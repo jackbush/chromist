@@ -129,7 +129,7 @@ export function ContrastAudit({
             onClick={() => setSettingsOpen(true)}
             aria-haspopup="dialog"
           >
-            <GearIcon size={16} />
+            <GearIcon />
             Accessibility audit settings
           </button>
         )}

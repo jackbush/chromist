@@ -4,7 +4,7 @@ import { cssVars, isWide, toHex } from '../color'
 import { COPIED_MS, copy } from '../clipboard'
 import { announce } from '../announce'
 import { useIsDesktop } from '../hooks/useIsDesktop'
-import { ClipboardIcon, XIcon } from './icons'
+import { ClipboardIcon, MonitorIcon, XIcon } from './icons'
 
 type Props = {
   pins: Pin[]
@@ -349,7 +349,9 @@ export function PinnedPane({
                     on it. */}
                 {split && (
                   <span className="pin-split" aria-hidden="true">
-                    P3 • sRGB
+                    <span>P3</span>
+                    <MonitorIcon size={12} />
+                    <span>sRGB</span>
                   </span>
                 )}
                 {selected && (
