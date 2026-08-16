@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import type { Colour, Gamut, ModeId, Pin, Spec, Weight } from './types'
 import { MAX_PINS } from './types'
 import { distinctFrom, oppositeColour, randomColour, toGamut } from './color'
@@ -181,8 +181,26 @@ export function App() {
     return () => window.removeEventListener('keydown', onKeyDown)
   }, [redo, undo])
 
+  /**
+   * The bar comes first in the DOM and holds eight controls, so reaching the
+   * palette by keyboard means going through all of them — and on a phone the
+   * bar is at the *bottom* of the screen, so the tab order starts at the far
+   * end of the layout. This jumps over it.
+   *
+   * A button rather than the usual `href="#main"`: the address bar is the
+   * share link here, and a fragment would overwrite the palette in it.
+   */
+  const mainRef = useRef<HTMLElement>(null)
+
   return (
     <div className="app" data-theme={settings.theme}>
+      <button
+        type="button"
+        className="skip-link"
+        onClick={() => mainRef.current?.focus()}
+      >
+        Skip to the palette
+      </button>
       <ActionBar
         pins={pins}
         settings={settings}
@@ -199,6 +217,7 @@ export function App() {
       />
       {auditing ? (
         <ContrastAudit
+          ref={mainRef}
           pins={pins}
           vision={vision}
           spec={settings.spec}
@@ -211,7 +230,7 @@ export function App() {
           onExit={() => setAuditing(false)}
         />
       ) : (
-        <main className="panes">
+        <main className="panes" ref={mainRef} tabIndex={-1}>
           <PinnedPane
             pins={pins}
             selectedId={selected.id}

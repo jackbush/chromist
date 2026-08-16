@@ -2,6 +2,7 @@ import { useCallback, useLayoutEffect, useRef, useState } from 'react'
 import type { Pin } from '../types'
 import { cssVars, isWide, toHex } from '../color'
 import { COPIED_MS, copy } from '../clipboard'
+import { announce } from '../announce'
 import { useIsDesktop } from '../hooks/useIsDesktop'
 import { ClipboardIcon, XIcon } from './icons'
 
@@ -130,7 +131,10 @@ export function PinnedPane({
   }
 
   const onHexClick = (e: React.MouseEvent<HTMLButtonElement>, pin: Pin) => {
-    if (nearCode(e, e.currentTarget)) handleCopy(pin)
+    // A keyboard press has no pointer to test — detail 0 is the tell. The cell
+    // is named as the copy and there is no pointer to aim with, so that is what
+    // it does; selecting is the swatch's job, and reachable one tab away.
+    if (e.detail === 0 || nearCode(e, e.currentTarget)) handleCopy(pin)
     else onSelect(pin.id)
   }
 
@@ -147,9 +151,12 @@ export function PinnedPane({
   }
 
   const handleCopy = useCallback(async (pin: Pin) => {
-    await copy(toHex(pin.colour))
+    const hex = toHex(pin.colour).toUpperCase()
+    await copy(hex)
     // Silent, as specified — the cell flashes, and the clipboard mark shows
-    // just long enough to be read before it times itself out.
+    // just long enough to be read before it times itself out. The flash is the
+    // whole of the feedback, so a screen reader is told in words instead.
+    announce(`Copied ${hex}`)
     setCopied(pin.id)
     if (flashTimer.current) window.clearTimeout(flashTimer.current)
     flashTimer.current = window.setTimeout(() => setCopied(null), COPIED_MS)
@@ -180,8 +187,14 @@ export function PinnedPane({
     return d
   }, [settle])
 
+  /** A drag ends in a click on the button underneath it. That click is the
+   *  tail of the gesture, not a press of its own, and selecting the tile you
+   *  just moved is not what was asked for. */
+  const dragged = useRef(false)
+
   const onPointerDown = (e: React.PointerEvent, pin: Pin, index: number) => {
     if (e.button !== 0 && e.pointerType === 'mouse') return
+    dragged.current = false
     const el = pinEls.current.get(pin.id)
     drag.current = {
       id: pin.id,
@@ -218,8 +231,43 @@ export function PinnedPane({
     applyDragTransform()
   }
 
+  /**
+   * The reorder, for anyone not holding a pointer.
+   *
+   * Alt with an arrow, on the axis the pane is laid out along — the same
+   * modifier a list reorder takes almost everywhere, and one the browser has no
+   * use for on a button. Plain arrows are left alone: they scroll, and taking
+   * that away from a keyboard user to move a tile is a poor trade.
+   */
+  const onSwatchKeyDown = (e: React.KeyboardEvent, pin: Pin, index: number) => {
+    if (!e.altKey) return
+    const back = e.key === (isDesktop ? 'ArrowUp' : 'ArrowLeft')
+    const on = e.key === (isDesktop ? 'ArrowDown' : 'ArrowRight')
+    if (!back && !on) return
+
+    const to = index + (back ? -1 : 1)
+    if (to < 0 || to >= pins.length) return
+    e.preventDefault()
+    onReorder(index, to)
+    announce(`${toHex(pin.colour).toUpperCase()} moved to position ${to + 1} of ${pins.length}`)
+  }
+
+  /**
+   * Deleting takes the focused button out of the document with it, which drops
+   * focus on the body — a keyboard user loses their place entirely. The colour
+   * that takes its place gets it instead.
+   */
+  const swatchEls = useRef(new Map<string, HTMLButtonElement>())
+  const restoreFocus = useRef(false)
+  useLayoutEffect(() => {
+    if (!restoreFocus.current) return
+    restoreFocus.current = false
+    swatchEls.current.get(selectedId)?.focus()
+  }, [selectedId, pins])
+
   const onPointerUp = (e: React.PointerEvent, pin: Pin) => {
     const d = endDrag()
+    dragged.current = !!d?.moved
     if (e.currentTarget.hasPointerCapture(e.pointerId)) {
       e.currentTarget.releasePointerCapture(e.pointerId)
     }
@@ -254,29 +302,48 @@ export function PinnedPane({
                 onClick={(e) => onHexClick(e, pin)}
                 onPointerMove={(e) => onHexMove(e, pin)}
                 onPointerLeave={() => setArmed((was) => (was === pin.id ? null : was))}
+                // Named for what it does rather than for what it reads, and
+                // built around the visible code so speech input still reaches
+                // it by name.
+                aria-label={`Copy ${hex.toUpperCase()}`}
                 title="Copy to clipboard"
               >
                 <span className="pin-code">{hex.toUpperCase()}</span>
                 <ClipboardIcon size={12} />
               </button>
+              {/* The gesture surface, and only that: the drag needs an element
+                  under the finger, but a control with a control inside it is
+                  not a thing a screen reader can describe. The two buttons
+                  below sit on it as siblings instead. */}
               <div
                 className={`pin-swatch${split ? ' is-split' : ''}`}
                 style={cssVars(pin.colour)}
-                role="button"
-                tabIndex={0}
-                aria-label={`Edit colour ${hex}${split ? ', outside sRGB' : ''}`}
-                aria-pressed={selected}
                 onPointerDown={(e) => onPointerDown(e, pin, index)}
                 onPointerMove={onPointerMove}
                 onPointerUp={(e) => onPointerUp(e, pin)}
                 onPointerCancel={endDrag}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' || e.key === ' ') {
-                    e.preventDefault()
-                    onSelect(pin.id)
-                  }
-                }}
               >
+                {/* Covers the swatch exactly, so the ring it takes on focus is
+                    the swatch's own outline in the same place it always was. */}
+                <button
+                  type="button"
+                  className="pin-select"
+                  ref={(el) => {
+                    if (el) swatchEls.current.set(pin.id, el)
+                    else swatchEls.current.delete(pin.id)
+                  }}
+                  aria-label={`Edit colour ${hex}${split ? ', outside sRGB' : ''}`}
+                  aria-pressed={selected}
+                  aria-keyshortcuts={isDesktop ? 'Alt+ArrowUp Alt+ArrowDown' : 'Alt+ArrowLeft Alt+ArrowRight'}
+                  onClick={() => {
+                    if (dragged.current) {
+                      dragged.current = false
+                      return
+                    }
+                    onSelect(pin.id)
+                  }}
+                  onKeyDown={(e) => onSwatchKeyDown(e, pin, index)}
+                />
                 {/* Only on the colour being edited, and inside the swatch rather
                     than beside the picker: it acts on this colour, so it belongs
                     on it. */}
@@ -293,7 +360,9 @@ export function PinnedPane({
                     onPointerDown={(e) => e.stopPropagation()}
                     onClick={(e) => {
                       e.stopPropagation()
+                      restoreFocus.current = true
                       onDelete()
+                      announce(`Removed ${hex.toUpperCase()}`)
                     }}
                     aria-label={`Remove colour ${hex}`}
                     title="Remove colour"

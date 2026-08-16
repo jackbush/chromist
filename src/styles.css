@@ -121,6 +121,13 @@ body {
   font-weight: 800;
   letter-spacing: 0.04em;
   min-width: 0;
+  /* The actions never shrink, so at 400% zoom this box does — and the name
+     used to run straight out of it and over the first icon. It gives way
+     properly instead: the app is not named twice on the screen, but the
+     controls are the part you can't do without. */
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .bar-actions {
@@ -357,6 +364,34 @@ body {
   --split-at: 66.667%;
 }
 
+/* A focus ring for the controls that sit on colours nobody chose for it: a
+   swatch is any colour at all, and so is most of the picker. White ring, black
+   band inside it — whichever the colour behind is closer to, the other one
+   still reads. The rest of the app keeps the browser's ring, which is fine
+   against the theme's own paper. */
+.pin-select:focus-visible,
+.picker-square:focus-visible,
+.picker-slider:focus-visible {
+  outline: 2px solid #ffffff;
+  outline-offset: -2px;
+  box-shadow: inset 0 0 0 4px #000000;
+}
+
+/* The swatch's own control, laid over the whole of it. It draws nothing — the
+   swatch behind it is the entire appearance — so all it contributes is a name,
+   a tab stop and a focus ring in exactly the place the swatch's was. */
+.pin-select {
+  display: block;
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  background: none;
+  border: 0;
+  /* The stripe owns the gesture, and this covers the stripe. */
+  touch-action: none;
+  outline-offset: -3px;
+}
+
 /* Names the division it sits on, dressed as the action beside it rather than as
    a warning — it is a label for what the stripe is showing, not a problem to
    answer. Desktop only: a phone stripe is narrower than the words. Never in the
@@ -379,6 +414,15 @@ body {
    that is depends on how the palette is laid out, so the placement is finished
    in the desktop block below. Coloured like the selected hex cell beside it,
    and rounded like every other action. */
+/* 22px is what it looks like; 24px is what it answers to. The extra ring is
+   transparent and draws nothing, which is exactly what 2.5.8 asks for — the
+   target has to be big enough, not the picture of it. */
+.pin-remove::after {
+  content: '';
+  position: absolute;
+  inset: -1px;
+}
+
 .pin-remove {
   position: absolute;
   left: 50%;
@@ -440,7 +484,11 @@ body {
   display: flex;
   align-items: stretch;
   width: 100%;
-  height: 1.875rem;
+  /* Tall enough for 16px type. The field and the space beside it are set at
+     that size because anything smaller makes iOS zoom the page to meet a
+     focused control — see the viewport meta, which no longer forbids the zoom
+     it was forbidding to work around exactly that. */
+  height: 2.25rem;
   border: 1px solid var(--fg);
   border-radius: 4px;
   overflow: hidden;
@@ -450,7 +498,7 @@ body {
   flex: 0 0 auto;
   padding: 0 0.5rem;
   font: inherit;
-  font-size: 0.6875rem;
+  font-size: 1rem;
   letter-spacing: 0.02em;
   color: inherit;
   background: none;
@@ -464,7 +512,7 @@ body {
   min-width: 0;
   padding: 0 0.5rem;
   font: inherit;
-  font-size: 0.6875rem;
+  font-size: 1rem;
   letter-spacing: 0.04em;
   text-transform: uppercase;
   color: inherit;
@@ -597,11 +645,32 @@ body {
 
 /* -------------------------------------------------------------- dialog */
 
+/* A real <dialog>, opened with showModal: the page behind it is inert to the
+   pointer, to Tab and to a screen reader's cursor alike, which is not something
+   a hand-rolled focus trap can claim. Everything below undoes the element's
+   own dressing — the app draws all of this itself. */
 .dialog-backdrop {
   position: fixed;
   inset: 0;
   z-index: 20;
   display: flex;
+  /* Stretched by its own inset, which is what `auto` means for a fixed box with
+     all four sides pinned. Both of the obvious alternatives are wrong: the
+     element's own `fit-content` sizes it to its contents, and `100%` resolves
+     against whichever viewport the browser hands a fixed element — the visual
+     one on a zoomed phone — so it draws wider than the page it is covering. */
+  width: auto;
+  height: auto;
+  max-width: none;
+  max-height: none;
+  margin: 0;
+  padding: 0;
+  color: inherit;
+  background: none;
+  border: 0;
+}
+
+.dialog-backdrop::backdrop {
   background: rgb(0 0 0 / 0.45);
 }
 
@@ -672,7 +741,10 @@ body {
   line-height: var(--dialog-line);
   text-align: right;
   width: calc(0.75rem + var(--dialog-gutter));
-  opacity: 0.35;
+  /* Faint enough to stay behind the codes, dark enough to be read: at 0.35 the
+     numbers were about 2.3:1 against the paper, which is not a colour tool's
+     business to be shipping. */
+  opacity: 0.55;
   pointer-events: none;
 }
 
@@ -710,6 +782,12 @@ body {
   gap: 0.25rem;
   list-style: none;
   font-size: 0.75rem;
+}
+
+/* It is in the document at all times so a screen reader has something to watch;
+   with nothing to say it takes no room, not even the dialog's gap. */
+.dialog-errors:empty {
+  display: none;
 }
 
 .dialog-errors li::before {
@@ -959,6 +1037,67 @@ body {
   border-bottom: 1px solid var(--fg);
 }
 
+/* The phone's stand-in for the four fields: one control where the bar has room
+   for one, dressed like the buttons in the action bar because that is what it
+   is. Full width, so it is hard to miss and easy to hit. */
+.audit-settings-btn {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.4375rem 0.75rem;
+  font-size: 0.8125rem;
+  letter-spacing: 0.02em;
+  border: 1px solid var(--line);
+  border-radius: 2px;
+}
+
+.audit-settings-btn:active {
+  background: var(--hover);
+}
+
+@media (hover: hover) {
+  .audit-settings-btn:hover {
+    background: var(--hover);
+  }
+}
+
+/* In the dialog the same four settings get the room the bar could not give
+   them: one per line, at a size worth tapping, and every control starting at
+   the same place down the page rather than wherever its label ended. */
+.audit-settings {
+  display: grid;
+  /* minmax(0, 1fr), not 1fr: a select is as wide as its longest option unless
+     it is told otherwise, and "Deuteranopia (0.6%)" was pushing the whole
+     column — and the Done button with it — off the side of the phone. */
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 0.875rem 0.75rem;
+}
+
+.audit-settings .audit-field {
+  display: contents;
+}
+
+.audit-settings .audit-field > span {
+  font-size: 1rem;
+  letter-spacing: 0.02em;
+}
+
+/* 16px, which is also the size below which iOS zooms the page to meet a
+   control. Nothing here has to be squeezed, so nothing is. */
+.audit-settings select {
+  width: 100%;
+  padding: 0.4375rem 0.5rem;
+  font: inherit;
+  font-size: 1rem;
+  color: inherit;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 2px;
+}
+
 /* The label names the control rather than sitting loose beside it, so nothing
    in the bar has to be read as a sentence. */
 .audit-field {
@@ -969,6 +1108,35 @@ body {
   font-size: 0.6875rem;
   letter-spacing: 0.02em;
   white-space: nowrap;
+}
+
+/* Out of the way until it is wanted: no room taken, nothing drawn, and then a
+   plain button at the top of the screen the moment it takes focus. Dressed like
+   the bar's own buttons, because that is what it is. */
+.skip-link {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 30;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.8125rem;
+  letter-spacing: 0.04em;
+  color: var(--bg);
+  background: var(--fg);
+  border-bottom-right-radius: 2px;
+  transform: translateY(-110%);
+}
+
+.skip-link:focus-visible {
+  transform: none;
+}
+
+/* The panes take focus from the skip link and should not draw a ring for it —
+   the landmark is announced, and there is nothing on screen the ring would be
+   pointing at. */
+.panes:focus,
+.audit:focus {
+  outline: none;
 }
 
 .visually-hidden {
@@ -1125,5 +1293,9 @@ body {
 @media (prefers-reduced-motion: reduce) {
   * {
     transition: none !important;
+    /* The flashes that mark a copy are motion too. The mark they leave — the
+       clipboard icon, the state class — does the telling on its own, and the
+       announcement does the rest. */
+    animation: none !important;
   }
 }

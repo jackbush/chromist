@@ -5,6 +5,7 @@ import { OTHER_THEME } from '../types'
 import { buildShareUrl } from '../urlHash'
 import { site } from '../../site.config'
 import { COPIED_MS, copy } from '../clipboard'
+import { announce } from '../announce'
 import { EditColoursDialog } from './EditColoursDialog'
 import {
   ContrastIcon,
@@ -71,6 +72,9 @@ export function ActionBar({
         gamut: settings.gamut,
       }),
     )
+    // The button flashes and nothing else happens; said in words, it is the
+    // difference between a copy that worked and a button that did nothing.
+    announce(auditing ? 'Link to this audit copied' : 'Link to this palette copied')
     setCopied(true)
     if (flashTimer.current) window.clearTimeout(flashTimer.current)
     flashTimer.current = window.setTimeout(() => setCopied(false), COPIED_MS)
@@ -157,7 +161,9 @@ export function ActionBar({
           href={HELP_URL}
           target="_blank"
           rel="noopener noreferrer"
-          aria-label="Help"
+          // Where it goes, and that it leaves: an unannounced new tab strands
+          // anyone who navigates back by keyboard or by gesture.
+          aria-label="Help — the readme, opens in a new tab"
           title="Help"
         >
           <QuestionIcon />

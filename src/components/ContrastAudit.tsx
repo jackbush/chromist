@@ -1,6 +1,5 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import type { Gamut, Pin, Spec, Weight } from '../types'
-import { GAMUTS, SPECS, WEIGHTS } from '../types'
 import { cssVars, deltaE, JND, toGamut, toHex } from '../color'
 import {
   apca,
@@ -13,6 +12,9 @@ import {
   scoreFor,
 } from '../contrast'
 import { simulate, VISIONS, type Vision } from '../cvd'
+import { AuditFields, AuditSettingsDialog } from './AuditSettings'
+import { GearIcon } from './icons'
+import { useIsDesktop } from '../hooks/useIsDesktop'
 
 /** Ordinary web text, and what a band that holds at any size is drawn at —
  *  there is no threshold to show, so it shows the size people actually set. */
@@ -33,6 +35,9 @@ type Props = {
   onWeightChange: (weight: Weight) => void
   onGamutChange: (gamut: Gamut) => void
   onExit: () => void
+  /** The skip link's destination, wherever the grid is standing in for the
+   *  palette panes. */
+  ref?: React.Ref<HTMLElement>
 }
 
 /**
@@ -73,7 +78,11 @@ export function ContrastAudit({
   onWeightChange,
   onGamutChange,
   onExit,
+  ref,
 }: Props) {
+  const isDesktop = useIsDesktop()
+  const [settingsOpen, setSettingsOpen] = useState(false)
+
   // Nothing is trapped here, but escape means the same as it does everywhere
   // else in the app: back to where you were.
   useEffect(() => {
@@ -96,59 +105,64 @@ export function ContrastAudit({
   const seen = pins.map((p) => simulate(toGamut(p.colour, gamut), vision))
 
   return (
-    <main className="audit" aria-label="Accessibility audit">
+    <main className="audit" ref={ref} tabIndex={-1} aria-label="Accessibility audit">
+      {/* Desktop lays the four settings along the bar. A phone has room for one
+          control there, so it gets the one that opens the rest — the grid is
+          what the screen is for, and four dropdowns were taking two rows of it
+          at a size nobody could tap accurately. */}
       <div className="audit-bar">
-        <label className="audit-field">
-          <span>WCAG</span>
-          <select value={spec} onChange={(e) => onSpecChange(e.target.value as Spec)}>
-            {(Object.keys(SPECS) as Spec[]).map((v) => (
-              <option key={v} value={v}>
-                {SPECS[v].label}
-              </option>
-            ))}
-          </select>
-        </label>
-
-        <label className="audit-field">
-          <span>Font weight</span>
-          <select value={weight} onChange={(e) => onWeightChange(Number(e.target.value) as Weight)}>
-            {WEIGHTS.map((w) => (
-              <option key={w} value={w}>
-                {w}
-                {w === 400 ? ' (Normal)' : w === 700 ? ' (Bold)' : ''}
-              </option>
-            ))}
-          </select>
-        </label>
-
-        <label className="audit-field">
-          <span>Gamut</span>
-          <select value={gamut} onChange={(e) => onGamutChange(e.target.value as Gamut)}>
-            {(Object.keys(GAMUTS) as Gamut[]).map((g) => (
-              <option key={g} value={g}>
-                {GAMUTS[g].label}
-              </option>
-            ))}
-          </select>
-        </label>
-
-        <label className="audit-field">
-          <span>Simulation</span>
-          <select value={vision} onChange={(e) => onVisionChange(e.target.value as Vision)}>
-            {(Object.keys(VISIONS) as Vision[]).map((v) => (
-              <option key={v} value={v}>
-                {VISIONS[v].label}
-              </option>
-            ))}
-          </select>
-        </label>
+        {isDesktop ? (
+          <AuditFields
+            spec={spec}
+            weight={weight}
+            gamut={gamut}
+            vision={vision}
+            onSpecChange={onSpecChange}
+            onWeightChange={onWeightChange}
+            onGamutChange={onGamutChange}
+            onVisionChange={onVisionChange}
+          />
+        ) : (
+          <button
+            type="button"
+            className="audit-settings-btn"
+            onClick={() => setSettingsOpen(true)}
+            aria-haspopup="dialog"
+          >
+            <GearIcon size={16} />
+            Accessibility audit settings
+          </button>
+        )}
       </div>
+
+      {settingsOpen && (
+        <AuditSettingsDialog
+            spec={spec}
+            weight={weight}
+            gamut={gamut}
+            vision={vision}
+            onSpecChange={onSpecChange}
+            onWeightChange={onWeightChange}
+            onGamutChange={onGamutChange}
+            onVisionChange={onVisionChange}
+          onClose={() => setSettingsOpen(false)}
+        />
+      )}
 
       {/* The one scroll container in the app: on a phone a seven-colour grid
           runs off both edges, and the labels stay put while it does. */}
       <div className="audit-scroll">
         {/* The row count drives the height each row resolves to. */}
         <table className="audit-grid" style={{ '--rows': pins.length } as React.CSSProperties}>
+          {/* What the grid is, for anyone who arrives at it a cell at a time and
+              never sees the shape of it. */}
+          <caption className="visually-hidden">
+            Every colour as text over every colour as background. Rows are the
+            background, columns are the text over it.{' '}
+            {spec === 'wcag22'
+              ? 'Each cell gives the WCAG 2.2 level and the contrast ratio.'
+              : 'Each cell gives the smallest font size that passes APCA, and the Lc value.'}
+          </caption>
           <thead>
             <tr>
               <th className="audit-head audit-corner">

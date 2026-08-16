@@ -236,7 +236,11 @@ export function ChannelPicker({ coords, mode, gamut, onCoords, note }: Props) {
         aria-label={mode.slider.label === 'H' ? 'Hue' : mode.slider.label}
         aria-valuenow={Math.round(coords.s)}
         aria-valuemin={0}
-        aria-valuemax={360}
+        // The mode's own range. Hardcoding 360 was right for hue and wrong for
+        // every other slider, and a screen reader reads the percentage it works
+        // out from these — so it was announcing the wrong number.
+        aria-valuemax={mode.slider.max}
+        aria-valuetext={`${mode.slider.label === 'H' ? 'Hue' : mode.slider.label} ${Math.round(coords.s)}`}
         style={{ backgroundImage: `linear-gradient(to right, ${track})` }}
       >
         <div className="picker-pointer" style={{ left: `${(coords.s / 360) * 100}%`, top: '50%' }} />
