@@ -204,7 +204,7 @@ export function PinnedPane({ pins, selectedId, showAdd, onSelect, onAdd, onReord
                 title="Copy to clipboard"
               >
                 {hex.toUpperCase()}
-                <ClipboardIcon size={11} />
+                <ClipboardIcon size={12} />
               </button>
               <div
                 className="pin-swatch"
