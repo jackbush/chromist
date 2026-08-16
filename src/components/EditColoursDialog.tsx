@@ -1,17 +1,16 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import type { Pin } from '../types'
+import type { Colour, Pin } from '../types'
 import { MAX_PINS } from '../types'
-import { hslToHex } from '../color'
 import { formatColourList, parseColourList } from '../colourList'
 
 type Props = {
   pins: Pin[]
-  onApply: (hexes: string[]) => void
+  onApply: (colours: Colour[]) => void
   onClose: () => void
 }
 
 export function EditColoursDialog({ pins, onApply, onClose }: Props) {
-  const [text, setText] = useState(() => formatColourList(pins.map((p) => hslToHex(p.hsl))))
+  const [text, setText] = useState(() => formatColourList(pins.map((p) => p.colour)))
   const [overflowed, setOverflowed] = useState(false)
   const areaRef = useRef<HTMLTextAreaElement>(null)
 
@@ -25,7 +24,7 @@ export function EditColoursDialog({ pins, onApply, onClose }: Props) {
   }
 
   // The draft is only read on apply, so an unfinished line costs nothing.
-  const { hexes, errors } = useMemo(() => parseColourList(text), [text])
+  const { colours, errors } = useMemo(() => parseColourList(text), [text])
 
   useEffect(() => {
     const area = areaRef.current
@@ -46,7 +45,7 @@ export function EditColoursDialog({ pins, onApply, onClose }: Props) {
 
   const apply = () => {
     if (errors.length > 0) return
-    onApply(hexes)
+    onApply(colours)
     onClose()
   }
 
@@ -86,7 +85,7 @@ export function EditColoursDialog({ pins, onApply, onClose }: Props) {
             autoComplete="off"
             autoCorrect="off"
             autoCapitalize="off"
-            aria-label={`Colours, one hex code per line, up to ${MAX_PINS}`}
+            aria-label={`Colours, one per line, up to ${MAX_PINS}`}
             aria-describedby="edit-colours-note"
             aria-invalid={errors.length > 0}
             // Enter belongs to the textarea; the modifier commits the lot.

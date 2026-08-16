@@ -1,10 +1,37 @@
 import { useEffect } from 'react'
-import type { Pin } from '../types'
-import { hslToCss, hslToHex } from '../color'
-import { contrastRatio, formatRatio, scoreFor } from '../contrast'
+import type { Gamut, Pin, Spec, Weight } from '../types'
+import { GAMUTS, SPECS, WEIGHTS } from '../types'
+import { cssVars, deltaE, JND, toGamut, toHex } from '../color'
+import {
+  apca,
+  contrastRatio,
+  formatApca,
+  formatMinFontSize,
+  formatRatio,
+  largeTextPx,
+  minFontSize,
+  scoreFor,
+} from '../contrast'
+import { simulate, VISIONS, type Vision } from '../cvd'
+
+/** Ordinary web text, and what a band that holds at any size is drawn at —
+ *  there is no threshold to show, so it shows the size people actually set. */
+const BODY_PX = 16
+
+/** Where there is no size to draw at all: a pair that fails outright, and the
+ *  spot-text and non-text findings. WCAG 2's larger definition of large text. */
+const FALLBACK_PX = 24
 
 type Props = {
   pins: Pin[]
+  vision: Vision
+  spec: Spec
+  weight: Weight
+  gamut: Gamut
+  onVisionChange: (vision: Vision) => void
+  onSpecChange: (spec: Spec) => void
+  onWeightChange: (weight: Weight) => void
+  onGamutChange: (gamut: Gamut) => void
   onExit: () => void
 }
 
@@ -17,8 +44,36 @@ type Props = {
  * This takes the place of the palette panes rather than covering them: the
  * action bar above stays live, so a colour can be edited, undone or shared
  * without leaving the reading of it.
+ *
+ * One specification at a time, because they disagree and reading them side by
+ * side invites treating the disagreement as a single verdict. WCAG 2.2 gives
+ * conformance levels, which is what anyone is actually held to. WCAG 3.0's APCA
+ * gives a font size, which is the question you had — and it is polarity-aware,
+ * so light-on-dark rates far below what the ratio suggests, and the grid stops
+ * being symmetric across its diagonal.
+ *
+ * Both take the font weight, which is why it is one control above and not two:
+ * WCAG 2 needs it to know where large text starts, APCA to pick a column. It
+ * also sets the weight the verdict itself is drawn in, so the grid keeps
+ * demonstrating what it claims.
+ *
+ * Running underneath either: a cell marked as a pair means the two colours are
+ * within a just-noticeable difference of each other — not low contrast, the
+ * *same colour*, which no specification catches and which the vision simulation
+ * turns up constantly.
  */
-export function ContrastAudit({ pins, onExit }: Props) {
+export function ContrastAudit({
+  pins,
+  vision,
+  spec,
+  weight,
+  gamut,
+  onVisionChange,
+  onSpecChange,
+  onWeightChange,
+  onGamutChange,
+  onExit,
+}: Props) {
   // Nothing is trapped here, but escape means the same as it does everywhere
   // else in the app: back to where you were.
   useEffect(() => {
@@ -33,10 +88,62 @@ export function ContrastAudit({ pins, onExit }: Props) {
     return () => document.removeEventListener('keydown', onKeyDown)
   }, [onExit])
 
-  const hexes = pins.map((p) => hslToHex(p.hsl).toUpperCase())
+  // Labels name the colour that was chosen; everything measured and everything
+  // painted uses the colour as it actually arrives. Screen first, then eye —
+  // that is the order it happens in, and a colour past the target's reach is
+  // mapped into it before anyone gets a chance to see it.
+  const hexes = pins.map((p) => toHex(p.colour).toUpperCase())
+  const seen = pins.map((p) => simulate(toGamut(p.colour, gamut), vision))
 
   return (
     <main className="audit" aria-label="Accessibility audit">
+      <div className="audit-bar">
+        <label className="audit-field">
+          <span>WCAG</span>
+          <select value={spec} onChange={(e) => onSpecChange(e.target.value as Spec)}>
+            {(Object.keys(SPECS) as Spec[]).map((v) => (
+              <option key={v} value={v}>
+                {SPECS[v].label}
+              </option>
+            ))}
+          </select>
+        </label>
+
+        <label className="audit-field">
+          <span>Font weight</span>
+          <select value={weight} onChange={(e) => onWeightChange(Number(e.target.value) as Weight)}>
+            {WEIGHTS.map((w) => (
+              <option key={w} value={w}>
+                {w}
+                {w === 400 ? ' (Normal)' : w === 700 ? ' (Bold)' : ''}
+              </option>
+            ))}
+          </select>
+        </label>
+
+        <label className="audit-field">
+          <span>Gamut</span>
+          <select value={gamut} onChange={(e) => onGamutChange(e.target.value as Gamut)}>
+            {(Object.keys(GAMUTS) as Gamut[]).map((g) => (
+              <option key={g} value={g}>
+                {GAMUTS[g].label}
+              </option>
+            ))}
+          </select>
+        </label>
+
+        <label className="audit-field">
+          <span>Simulation</span>
+          <select value={vision} onChange={(e) => onVisionChange(e.target.value as Vision)}>
+            {(Object.keys(VISIONS) as Vision[]).map((v) => (
+              <option key={v} value={v}>
+                {VISIONS[v].label}
+              </option>
+            ))}
+          </select>
+        </label>
+      </div>
+
       {/* The one scroll container in the app: on a phone a seven-colour grid
           runs off both edges, and the labels stay put while it does. */}
       <div className="audit-scroll">
@@ -65,27 +172,84 @@ export function ContrastAudit({ pins, onExit }: Props) {
                   // diagonal shows the colour itself instead.
                   if (r === c) {
                     return (
-                      <td
-                        key={col.id}
-                        className="audit-cell is-same"
-                        style={{ background: hslToCss(col.hsl) }}
-                      >
+                      <td key={col.id} className="audit-cell is-same" style={cssVars(seen[c], gamut)}>
                         <span className="visually-hidden">{hexes[r]} on itself</span>
                       </td>
                     )
                   }
 
-                  const ratio = contrastRatio(col.hsl, row.hsl)
+                  const close = deltaE(seen[c], seen[r]) < JND
+                  const ratio = contrastRatio(seen[c], seen[r])
+                  const lc = apca(seen[c], seen[r])
+                  const score = scoreFor(ratio)
+                  const smallest = minFontSize(lc, weight)
+
+                  /**
+                   * The verdict is drawn at the size it is reporting, so the
+                   * cell is the demonstration rather than a description of one.
+                   * AA and AAA hold at any size, so they are drawn at ordinary
+                   * body text; AA+ at the large-text threshold it depends on;
+                   * and anything carrying no text at all at the fallback.
+                   */
+                  const drawAt =
+                    spec === 'wcag30'
+                      ? 'px' in smallest
+                        ? smallest.px
+                        : FALLBACK_PX
+                      : score === 'AA+'
+                        ? largeTextPx(weight)
+                        : score === 'FAIL'
+                          ? FALLBACK_PX
+                          : BODY_PX
+
                   return (
-                    <td
-                      key={col.id}
-                      className="audit-cell"
-                      style={{ background: hslToCss(row.hsl) }}
-                    >
-                      <div className="audit-score" style={{ color: hslToCss(col.hsl) }}>
-                        {scoreFor(ratio)}
+                    <td key={col.id} className="audit-cell" style={cssVars(seen[r], gamut)}>
+                      {/* Set in the pair's own colours, at the chosen weight and
+                          at the size being claimed, so it is legible only if the
+                          claim holds — a hairline at 100 being hard to read is
+                          the finding, not a fault. When the two are the same
+                          colour this band is simply blank, which is also the
+                          finding. */}
+                      <div
+                        className="audit-score"
+                        style={
+                          {
+                            ...cssVars(seen[c], gamut),
+                            fontWeight: weight,
+                            '--verdict-px': `${drawAt}px`,
+                          } as React.CSSProperties
+                        }
+                      >
+                        {spec === 'wcag22' ? score : formatMinFontSize(smallest)}
                       </div>
-                      <div className="audit-ratio">{formatRatio(ratio)}</div>
+                      {/* The theme's ink on the theme's paper, and it has to be:
+                          a cell reporting that its two colours are one colour
+                          cannot report it in either of them. */}
+                      <div className="audit-facts">
+                        {close ? (
+                          <span className="audit-close">
+                            same colour
+                            <span className="visually-hidden">
+                              {' '}
+                              as {hexes[r]}
+                              {vision === 'normal' ? '' : ` with ${VISIONS[vision].label}`}
+                            </span>
+                          </span>
+                        ) : spec === 'wcag22' ? (
+                          <>
+                            <span>{formatRatio(ratio)}</span>
+                            {/* AA+ is the band that only holds at size, so it is
+                                the only one with a size worth quoting. */}
+                            {score === 'AA+' && (
+                              <span className="audit-apca">≥{largeTextPx(weight)}px</span>
+                            )}
+                          </>
+                        ) : (
+                          <span title="APCA lightness contrast, signed for polarity">
+                            {formatApca(lc)}
+                          </span>
+                        )}
+                      </div>
                     </td>
                   )
                 })}

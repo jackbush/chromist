@@ -112,52 +112,9 @@ body {
 
 .bar-title {
   font-size: 0.8125rem;
-  font-weight: 400;
-  min-width: 0;
-}
-
-/* Reads as the same line as the audit's warning: same size, same spacing, same
-   full-strength colour, an icon of the same size leading it. The two bars are
-   the same height and now carry the same voice. */
-.bar-share {
-  display: flex;
-  align-items: center;
-  gap: 0.375rem;
-  padding: 0.25rem;
-  margin: -0.25rem;
+  font-weight: 800;
   letter-spacing: 0.04em;
-  border-radius: 2px;
-  transition: background 80ms linear;
-}
-
-/* The label no longer dims, so hover is carried by the ground under it and by
-   the clipboard appearing beside it. */
-.bar-share:hover,
-.bar-share:focus-visible {
-  background: var(--hover);
-}
-
-.bar-share.is-copied {
-  animation: share-flash 400ms linear;
-}
-
-/* The clipboard only appears on hover, but its space is always reserved so
-   the label never shifts. Touch has no hover to reveal it with — or to end,
-   which is why a copy shows it on a timer instead. */
-.bar-share .clip {
-  opacity: 0;
-  transition: opacity 120ms linear;
-}
-
-.bar-share:focus-visible .clip,
-.bar-share.is-copied .clip {
-  opacity: 1;
-}
-
-@media (hover: hover) {
-  .bar-share:hover .clip {
-    opacity: 1;
-  }
+  min-width: 0;
 }
 
 .bar-actions {
@@ -168,8 +125,23 @@ body {
 
 .bar-btn {
   display: flex;
+  align-items: center;
+  gap: 0.375rem;
   padding: 0.375rem;
   border-radius: 2px;
+  /* One of these is a link out to the readme; it should not read as one. */
+  color: inherit;
+  text-decoration: none;
+}
+
+/* Hidden by default and shown once there is room: on a phone the bar is seven
+   targets across and the icons have to carry it alone. The buttons keep their
+   aria-labels either way, so nothing is lost when the text is. */
+.bar-label {
+  display: none;
+  font-size: 0.8125rem;
+  letter-spacing: 0.04em;
+  padding-right: 0.125rem;
 }
 
 .bar-btn:hover:not(:disabled) {
@@ -182,7 +154,7 @@ body {
 }
 
 .bar-btn.is-copied {
-  opacity: 0.35;
+  animation: share-flash 400ms linear;
 }
 
 /* A mode you are in, marked the same way the selected colour is: the cell
@@ -201,6 +173,10 @@ body {
    the panes side by side and it stands up. */
 .pins {
   display: flex;
+  /* Mobile puts the palette at the top of the screen, hard against the status
+     bar; the rule keeps the hex codes from reading as part of it. Desktop has
+     the bar above instead, which already draws one. */
+  border-top: 1px solid var(--fg);
   border-bottom: 1px solid var(--fg);
 }
 
@@ -310,10 +286,48 @@ body {
     opacity: 1;
   }
 
-  @media (hover: hover) {
-    .pin-hex:hover svg {
-      opacity: 1;
-    }
+  /* Not `:hover`. The cell runs the width of the stripe and only the code
+     copies, so hovering the empty part of it was offering something the click
+     would not do. The class is set from the same hit test the click uses. */
+  .pin-hex.is-armed svg {
+    opacity: 1;
+  }
+}
+
+/* Colours arrive as a pair of custom properties — the sRGB hex, and the wide
+   value that is the same hex unless the colour needs more than sRGB. The second
+   rule is simply skipped where `color()` isn't understood, which is the whole
+   point of shipping both. See cssVars in gamut.ts. */
+.pin-swatch,
+.audit-cell {
+  background: var(--c);
+}
+
+.audit-score {
+  color: var(--c);
+}
+
+@supports (color: color(display-p3 1 0 0)) {
+  .pin-swatch,
+  .audit-cell {
+    background: var(--c-wide);
+  }
+
+  .audit-score {
+    color: var(--c-wide);
+  }
+
+  /* The colour as it is, against the colour a narrower screen will make of it —
+     which is exactly the pair already carried for the fallback. The hard stop
+     keeps it a comparison rather than a gradient. Only inside `@supports`: where
+     `color()` can't be read the two are the same value anyway, so the rule below
+     leaves the swatch flat rather than drawing a division that isn't there. */
+  .pin-swatch.is-split {
+    background: linear-gradient(
+      var(--split-to, to bottom),
+      var(--c-wide) 0 var(--split-at),
+      var(--c) var(--split-at) 100%
+    );
   }
 }
 
@@ -323,6 +337,41 @@ body {
   position: relative;
   touch-action: none; /* the stripe owns the gesture, for drag-to-reorder */
   outline-offset: -3px;
+  --split-at: 66.667%;
+}
+
+/* Names the division it sits on, dressed as the action beside it rather than as
+   a warning — it is a label for what the stripe is showing, not a problem to
+   answer. Desktop only: a phone stripe is narrower than the words. Never in the
+   way of a drag. */
+.pin-split {
+  position: absolute;
+  display: none;
+  padding: 0.25rem;
+  font-size: 0.6875rem;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  color: var(--fg);
+  background: var(--bg);
+  border-radius: 4px;
+  pointer-events: none;
+}
+
+
+/* On the swatch being edited, at the end the hex cell is on — which way round
+   that is depends on how the palette is laid out, so the placement is finished
+   in the desktop block below. Coloured like the selected hex cell beside it,
+   and rounded like every other action. */
+.pin-remove {
+  position: absolute;
+  left: 50%;
+  top: 8px;
+  transform: translateX(-50%);
+  display: flex;
+  padding: 0.25rem;
+  color: var(--bg);
+  background: var(--fg);
+  border-radius: 4px;
 }
 
 .pin-swatch-add {
@@ -359,34 +408,68 @@ body {
   padding: 0.5rem;
 }
 
-.editor-hex {
-  width: 9ch;
-  padding: 0.125rem 0;
+/* The space, the value and the copy, as one object: matched heights, one
+   border around the lot, and the seams between them drawn at the same weight as
+   everything else in the app. Left-aligned, because it labels the square below
+   rather than centring over it. */
+.editor-value {
+  display: flex;
+  align-items: stretch;
+  width: 100%;
+  height: 1.875rem;
+  border: 1px solid var(--fg);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.editor-mode {
+  flex: 0 0 auto;
+  padding: 0 0.5rem;
   font: inherit;
-  font-size: 1.25rem;
-  letter-spacing: 0.06em;
-  text-align: center;
+  font-size: 0.6875rem;
+  letter-spacing: 0.02em;
+  color: inherit;
+  background: none;
+  border: 0;
+  border-right: 1px solid var(--fg);
+  border-radius: 0;
+}
+
+.editor-hex {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 0 0.5rem;
+  font: inherit;
+  font-size: 0.6875rem;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
   color: inherit;
   background: none;
   border: 0;
-  border-radius: 2px;
-  outline-offset: 2px;
+  outline-offset: -3px;
 }
 
-.editor-delete {
+/* Full strength, like every other rule and mark in the app — dimming it made
+   the icon and its seam read as a different, greyer ink than the border around
+   them. Hover is carried by the ground instead. */
+.editor-copy {
+  flex: 0 0 auto;
   display: flex;
-  padding: 0.375rem;
-  border-radius: 2px;
-  opacity: 0.7;
+  align-items: center;
+  padding: 0 0.5rem;
+  border-left: 1px solid var(--fg);
 }
 
-.editor-delete:hover {
-  opacity: 1;
+.editor-copy:hover {
   background: var(--hover);
 }
 
+.editor-copy.is-copied {
+  animation: hex-flash 400ms linear;
+}
+
 .editor-picker {
+  position: relative;
   flex: 1;
   display: flex;
   align-items: center;
@@ -394,32 +477,89 @@ body {
   min-height: 0;
 }
 
-/* react-colorful, stretched edge to edge and flattened to match the UI */
-.editor-picker .react-colorful {
+/* Inside the square's bottom-right, so it cannot land on the hue slider however
+   tall that happens to be. Set on the theme's own ground to stay readable
+   whatever colour it is over. */
+.picker-note {
+  position: absolute;
+  right: 0.5rem;
+  bottom: 0.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.1875rem 0.375rem;
+  font-size: 0.6875rem;
+  letter-spacing: 0.02em;
+  color: var(--bg);
+  background: var(--fg);
+  border-radius: 4px;
+  pointer-events: none;
+}
+
+/* The picker: a square and a slider, edge to edge and flattened to match the
+   rest of the UI. Both are painted by the mode rather than by CSS — see
+   gamut.ts — so there is nothing here about colour. */
+.picker {
+  display: flex;
+  flex-direction: column;
   width: 100%;
   height: 100%;
 }
 
-.editor-picker .react-colorful__saturation {
-  border-radius: 0;
-  border-bottom: 0;
-  /* The library outlines the square in 5% black. Harmless on a card, but it
-     reads as a second, weaker rule beside the pane divider. */
-  box-shadow: none;
+.picker-square {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  touch-action: none;
+  outline-offset: -3px;
+  /* The canvas is painted at 128px and stretched. Out-of-gamut pixels are left
+     transparent, so what shows through the dead zone is this: the theme's own
+     paper, which reads as "not part of the control" rather than as a colour. */
+  background: var(--bg);
+}
+
+.picker-square canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
 }
 
 /* Ruled off from the square above it at the same weight as the pane divider:
    two bands of colour meeting edge to edge otherwise read as one surface. */
-.editor-picker .react-colorful__hue {
+.picker-slider {
+  position: relative;
   flex: 0 0 auto;
   height: 2.75rem;
-  border-radius: 0;
+  touch-action: none;
   border-top: 1px solid var(--fg);
+  outline-offset: -3px;
 }
 
-.editor-picker .react-colorful__pointer {
+/* One pointer for both controls; the slider pins it to the middle of the track
+   and only the square moves it in both axes. */
+.picker-pointer {
+  position: absolute;
   width: 1.25rem;
   height: 1.25rem;
+  transform: translate(-50%, -50%);
+  border: 2px solid #fff;
+  border-radius: 50%;
+  box-shadow:
+    0 0 0 1px rgb(0 0 0 / 0.3),
+    inset 0 0 0 1px rgb(0 0 0 / 0.3);
+  pointer-events: none;
+}
+
+/* ------------------------------------------------------ audit fields */
+
+.audit-field select {
+  font: inherit;
+  font-size: 0.75rem;
+  padding: 0.125rem 0.25rem;
+  color: inherit;
+  background: none;
+  border: 1px solid var(--fg);
+  border-radius: 2px;
 }
 
 /* -------------------------------------------------------------- dialog */
@@ -564,6 +704,7 @@ body {
 .audit {
   flex: 1;
   display: flex;
+  flex-direction: column;
   min-height: 0;
 }
 
@@ -578,9 +719,30 @@ body {
 
 /* Deliberately not stretched to the viewport: a table told to fill its height
    hands the slack to whichever row asks first, and every row here is worth
-   exactly as much as the others. */
+   exactly as much as the others.
+
+   Fixed layout, because the alternative measures the content: an "AA+" cell and
+   a "spot only" cell would take different widths, so the whole grid shifted
+   whenever the spec or the weight changed. Under `fixed`, the first column
+   takes the width named below and the rest divide what's left equally, and
+   nothing inside a cell gets a vote. */
 .audit-grid {
-  width: 100%;
+  table-layout: fixed;
+  /* Matches the hex cell in the palette pane: seven characters of label, with
+     room for an icon either side of them.
+
+     Spelled out in rem rather than as `7ch` because a custom property resolves
+     its units where it is *used* — and this one is used both here, where the
+     font is the table's, and on the label cells, where it is smaller. The two
+     would disagree. 0.6 is the advance width of a monospace character, 0.6875rem
+     the label's size, 1.125rem an icon's. */
+  --label-w: calc(7 * 0.6 * 0.6875rem + 2 * 1.125rem);
+  /* 10rem is the 160px asked for, in the unit the rest of the file uses, so
+     it still scales if the root size does. */
+  --col-min: 10rem;
+  /* Fills the pane when there is room and scrolls when there isn't, rather than
+     squeezing seven columns into a phone. */
+  width: max(100%, calc(var(--label-w) + var(--rows, 1) * var(--col-min)));
   border-collapse: separate; /* collapse drops borders on sticky cells */
   border-spacing: 0;
   /* Every row is worth exactly as much as the others: the space left under the
@@ -626,20 +788,22 @@ body {
   z-index: 3;
 }
 
-/* The label column is a label, not a share of the table. Asking for 1% of the
-   width holds it at its own content — one hex and its padding — and hands the
-   rest to the cells, so two colours read at the same gutter as seven. */
+/* The label column is a label, not a share of the table, and it is the same
+   width whatever the grid is reporting — so switching spec or weight moves
+   nothing sideways. */
 .audit-corner,
 .audit-grid tbody .audit-head {
-  width: 1%;
+  width: var(--label-w);
 }
 
 /* The cell carries the row colour itself, so the column never shows a seam of
    theme background between the score and the ratio strip. */
 .audit-cell {
-  min-width: 6.5rem;
   padding: 0;
   vertical-align: top;
+  /* Fixed layout stops content setting the width; this stops it spilling out of
+     the width it was given. */
+  overflow: hidden;
   /* Rules both ways: the columns run the whole way down, the rows the whole
      way across. */
   border-right: 1px solid var(--fg);
@@ -661,24 +825,69 @@ body {
   align-items: center;
   justify-content: center;
   height: calc(var(--row-h) - 1.5rem - 1px);
-  /* 14pt bold — the smaller of WCAG's two definitions of large text, and so
-     the size at which an AA+ actually holds. */
-  font-size: 1.1667rem;
-  font-weight: 700;
+  /* Drawn at the size and weight it is reporting, both set per cell by the
+     audit — so a cell saying 14.5px is 14.5px, and the grid demonstrates its
+     claim rather than describing it.
+
+     Capped, because the table answers a bad pair with 120px and a row is
+     nowhere near that tall. The number in the cell stays truthful when the
+     drawing of it can't be; every size that fits is exact. */
+  font-size: min(var(--verdict-px, 1.1667rem), 2.5rem);
   letter-spacing: 0.02em;
+  /* "spot only" at 24px is wider than a column, so let it break rather than
+     spill. */
+  text-align: center;
+  line-height: 1.1;
 }
 
-.audit-ratio {
+.audit-facts {
   display: flex;
   align-items: center;
   justify-content: center;
+  gap: 0.5rem;
   height: 1.5rem;
-  font-size: 1rem;
+  font-size: 0.8125rem;
   line-height: 1;
+  white-space: nowrap;
   /* The theme's ink on the theme's paper, same as the headings: the palette's
-     own colours are the only thing in the grid that isn't. */
+     own colours are the only thing in the grid that isn't. This strip has to
+     be, too — a cell whose finding is that its two colours are one colour has
+     no third colour to say so in. */
   color: var(--fg);
   background: var(--bg);
+}
+
+/* Secondary to the WCAG ratio beside it, and deliberately: APCA is the draft,
+   and the ratio is what anyone is actually held to. */
+.audit-apca {
+  opacity: 0.6;
+}
+
+.audit-close {
+  font-weight: 700;
+}
+
+/* Sits between the bar and the grid, out of the scroll container so it stays
+   put while the matrix moves under it. Three labelled fields is more than a
+   phone has room for on one line, so it wraps. */
+.audit-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.375rem 0.75rem;
+  padding: 0.375rem 0.5rem;
+  border-bottom: 1px solid var(--fg);
+}
+
+/* The label names the control rather than sitting loose beside it, so nothing
+   in the bar has to be read as a sentence. */
+.audit-field {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  font-size: 0.6875rem;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
 }
 
 .visually-hidden {
@@ -695,6 +904,10 @@ body {
 /* ------------------------------------------------------------- desktop */
 
 @media (min-width: 768px) {
+  .bar-label {
+    display: inline;
+  }
+
   .app {
     flex-direction: column; /* bar back to the top */
   }
@@ -709,10 +922,51 @@ body {
     flex-direction: row; /* pins left, editor right */
   }
 
-  /* The divider turns with the layout. */
+  /* The divider turns with the layout, and the status-bar rule is the phone's
+     concern alone — the action bar sits above the palette here. */
   .pins {
+    border-top: 0;
     border-bottom: 0;
     border-right: 1px solid var(--fg);
+  }
+
+  /* The pane runs down the screen now, so the remove action moves to the end of
+     the stripe rather than the foot of the pane. */
+  .pin-swatch {
+    --split-to: to right;
+  }
+
+  /* Centred on the division, then nudged one character clear of it so the rule
+     reads between the two words rather than under one of them. */
+  .pin-split {
+    display: block;
+    left: var(--split-at);
+    top: 50%;
+    transform: translate(calc(-50% + 1ch), -50%);
+  }
+
+  .pin-remove {
+    left: 8px;
+    right: auto;
+    top: 50%;
+    bottom: auto;
+    transform: translateY(-50%);
+    /* Matches the hex cell it sits opposite, which no longer inverts here. */
+    color: var(--fg);
+    background: var(--bg);
+  }
+
+  /* Inverting the whole cell was too loud once the stripes ran wide: the
+     selection is marked at the edge instead, in the ink the cell is already
+     using. */
+  /* An inset shadow, not a border: a border is part of the box, so it shrank
+     the content and shifted the centred code — which also dragged the clipboard
+     out of position and past the container query that reveals it. A shadow
+     paints over the cell and costs it nothing. */
+  .pin-hex.is-selected {
+    color: var(--fg);
+    background: var(--bg);
+    box-shadow: inset 12px 0 0 0 var(--fg);
   }
 
   /* Stripes rotate: horizontal bands stacked down the pane. */
@@ -770,7 +1024,7 @@ body {
     container-type: size;
   }
 
-  .editor-picker .react-colorful__hue {
+  .picker-slider {
     height: calc(100cqh / 7);
   }
 }

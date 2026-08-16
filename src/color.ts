@@ -1,76 +1,133 @@
-import { converter, formatHex, parse } from 'culori'
-import type { Hsl } from './types'
+import { converter, differenceCiede2000, parse } from 'culori'
+import type { Colour, Gamut } from './types'
+import { isInGamut, toCss, toGamut, toHex } from './gamut'
 
-const toHsl = converter('hsl')
+export { toCss, toHex, toGamut, isInGamut, isWide, cssVars } from './gamut'
+
+const toOklab = converter('oklab')
+const toOklch = converter('oklch')
 
 /**
- * culori leaves `h` undefined for achromatic colours (any pure grey, which
- * includes two of our three themes), so every read of it needs a fallback.
+ * Values are deliberately NOT rounded. OKLab holds a colour exactly: hex ->
+ * OKLab -> hex is lossless for all 16.7M sRGB colours (asserted in the checks),
+ * so nothing drifts as long as rounding is left to the point of display.
  *
- * Values are deliberately NOT rounded: integer HSL has ~3.7M states against
- * hex's 16.7M, so rounding here makes hex -> hsl -> hex drift (#2e86ab would
- * come back as #2e87ad). Round at the point of display instead.
+ * Unlike HSL there is no hue singularity to guard — a grey is simply a = b = 0.
+ * The picker still has to remember a hue across greys, but that is a property of
+ * the control, not of the colour.
  */
-export function hexToHsl(hex: string): Hsl | null {
-  const parsed = parse(hex)
+export function parseColour(text: string): Colour | null {
+  const parsed = parse(text.trim())
   if (!parsed) return null
-  const c = toHsl(parsed)
+  const c = toOklab(parsed)
   if (!c) return null
-  return { h: c.h ?? 0, s: (c.s ?? 0) * 100, l: (c.l ?? 0) * 100 }
+  return { l: c.l ?? 0, a: c.a ?? 0, b: c.b ?? 0 }
 }
 
-export function hslToHex({ h, s, l }: Hsl): string {
-  return formatHex({ mode: 'hsl', h, s: s / 100, l: l / 100 }) ?? '#000000'
-}
-
-export function hslToCss({ h, s, l }: Hsl): string {
-  return `hsl(${h} ${s}% ${l}%)`
-}
-
-export function hslEquals(a: Hsl, b: Hsl): boolean {
-  return a.h === b.h && a.s === b.s && a.l === b.l
+export function colourEquals(x: Colour, y: Colour): boolean {
+  return x.l === y.l && x.a === y.a && x.b === y.b
 }
 
 /**
- * The opposite of a colour: hue rotated half a turn with lightness mirrored
- * around 50%, saturation untouched. Mirroring lightness is what keeps this
- * useful on neutrals — a plain hue rotation leaves any grey exactly where it
- * was, and the app's own theme colours are all greys.
+ * The opposite of a colour: both opponent axes negated, lightness mirrored.
+ *
+ * Negating a and b is what a hue rotation of half a turn *is* in OKLab, and it
+ * costs nothing on neutrals, where a rotation would be a no-op — mirroring
+ * lightness is what keeps the result useful there, since the app's own theme
+ * colours are all greys.
+ *
+ * Kept exact and unclamped so it stays its own inverse; fitting the result to a
+ * gamut is `distinctFrom`'s job, and clamping here would break the involution.
  */
-export function oppositeHsl({ h, s, l }: Hsl): Hsl {
-  return { h: (h + 180) % 360, s, l: 100 - l }
+export function oppositeColour({ l, a, b }: Colour): Colour {
+  return { l: 1 - l, a: -a, b: -b }
 }
 
-/** Random hue, with saturation and lightness held in a usable band so the app
- *  never opens on something muddy or near-black. */
-export function randomHsl(): Hsl {
-  return {
+/** Perceptual distance. CIEDE2000 rather than Euclidean OKLab: the latter is
+ *  badly nonlinear at the dark end, scoring #000000 against #0a0a0a some thirty
+ *  times higher than a mid-tone pair that looks equally close. */
+const difference = differenceCiede2000()
+
+export function deltaE(x: Colour, y: Colour): number {
+  return difference({ mode: 'oklab', ...x }, { mode: 'oklab', ...y })
+}
+
+/** The long-standing just-noticeable-difference for CIEDE2000. Below this, two
+ *  colours are the same colour as far as an eye is concerned. */
+export const JND = 2.3
+
+/**
+ * Random hue, with lightness and chroma held in a usable band so the app never
+ * opens on something muddy or near-black. The band is written in OKLCH, where
+ * it means the same thing at every hue — the equivalent HSL band does not, and
+ * would open on a washed-out yellow as readily as a solid blue.
+ *
+ * Mapped into sRGB on the way out: the chroma that is available at a given
+ * lightness varies by hue, and this band asks for more than blue can give.
+ */
+export function randomColour(): Colour {
+  const c = toOklab({
+    mode: 'oklch',
+    l: 0.55 + Math.random() * 0.2,
+    c: 0.1 + Math.random() * 0.05,
     h: Math.random() * 360,
-    s: 55 + Math.random() * 35,
-    l: 40 + Math.random() * 25,
-  }
+  })
+  return toGamut({ l: c.l ?? 0, a: c.a ?? 0, b: c.b ?? 0 }, 'srgb')
 }
 
 /**
  * Keeps a new colour from duplicating one already in the palette — pressing `+`
  * twice would otherwise land back on the first colour, since the opposite of an
- * opposite is the original. Falls back to a fresh random colour, the same rule
- * the app starts on. Comparison is by hex, which is what the user actually sees.
+ * opposite is the original. Also where the candidate is fitted to the target
+ * gamut, since that is the point at which it becomes a colour to be shown.
+ *
+ * Comparison is perceptual, not by hex: two colours a single bit apart are the
+ * same colour to look at, and adding one to a palette is never what was meant.
  */
-export function distinctFrom(candidate: Hsl, existing: Hsl[]): Hsl {
-  const taken = new Set(existing.map(hslToHex))
-  if (!taken.has(hslToHex(candidate))) return candidate
+export function distinctFrom(candidate: Colour, existing: Colour[], gamut: Gamut): Colour {
+  const clear = (c: Colour) => existing.every((e) => deltaE(c, e) >= JND)
+
+  const fitted = toGamut(candidate, gamut)
+  if (clear(fitted)) return fitted
 
   // With at most 7 pins a free colour is found almost immediately; the bound is
   // only here so this can never spin.
   for (let i = 0; i < 50; i++) {
-    const fresh = randomHsl()
-    if (!taken.has(hslToHex(fresh))) return fresh
+    const fresh = randomColour()
+    if (clear(fresh)) return fresh
   }
-  return randomHsl()
+  return randomColour()
+}
+
+/** The pairs in a palette that are too close to tell apart, as index pairs into
+ *  the list given. What the audit reports on its diagonal. */
+export function tooClose(colours: Colour[]): Array<[number, number]> {
+  const pairs: Array<[number, number]> = []
+  for (let i = 0; i < colours.length; i++) {
+    for (let j = i + 1; j < colours.length; j++) {
+      if (deltaE(colours[i], colours[j]) < JND) pairs.push([i, j])
+    }
+  }
+  return pairs
 }
 
 /** Bare six-digit hex, no leading hash — the form used in the share URL. */
-export function toBareHex(hsl: Hsl): string {
-  return hslToHex(hsl).slice(1)
+export function toBareHex(c: Colour): string {
+  return toHex(c).slice(1)
+}
+
+/** How a colour is written into a paste list: hex while it fits in sRGB, and
+ *  the wide form only when it has to be. */
+export function toListText(c: Colour): string {
+  if (isInGamut(c, 'srgb')) return toHex(c).toUpperCase()
+  // Through toCss, so a pasted list gets the same rounded, clamped form the
+  // stylesheet does rather than a raw conversion's float tail.
+  return toCss(c, 'p3')
+}
+
+/** OKLCH is the useful polar reading of the canonical value — used by the
+ *  picker, the mode table and anything that needs a hue. */
+export function toLch(c: Colour): { l: number; c: number; h: number } {
+  const p = toOklch({ mode: 'oklab', ...c })
+  return { l: p.l ?? 0, c: p.c ?? 0, h: p.h ?? 0 }
 }

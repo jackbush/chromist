@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useState } from 'react'
-import type { Hsl, Pin } from './types'
+import type { Colour, Gamut, ModeId, Pin, Spec, Weight } from './types'
 import { MAX_PINS } from './types'
-import { distinctFrom, hexToHsl, oppositeHsl, randomHsl } from './color'
+import { distinctFrom, oppositeColour, randomColour, toGamut } from './color'
+import { clampCount, gamutFor, modeById } from './modes'
 import { newId } from './id'
 import { clear as clearStorage, DEFAULT_SETTINGS } from './storage'
 import { useInitialState, usePersist } from './hooks/usePersistentState'
@@ -10,6 +11,7 @@ import { PinnedPane } from './components/PinnedPane'
 import { Editor } from './components/Editor'
 import { ActionBar } from './components/ActionBar'
 import { ContrastAudit } from './components/ContrastAudit'
+import type { Vision } from './cvd'
 
 export function App() {
   const initial = useInitialState()
@@ -29,7 +31,11 @@ export function App() {
   // window over it: the bar keeps working, and every edit made from it lands on
   // the grid straight away.
   const [auditing, setAuditing] = useState(initial.audit)
-  usePersist(pins, settings, auditing)
+  // Which eye the audit is read through. Like the audit itself this describes a
+  // look at the palette rather than the palette, so it rides in the URL and
+  // stays out of storage.
+  const [vision, setVision] = useState<Vision>(initial.vision)
+  usePersist(pins, settings, auditing, vision)
 
   const [selectedId, setSelectedId] = useState<string>(initial.pins[0].id)
 
@@ -48,21 +54,23 @@ export function App() {
    *  the end, so a pair stays a pair without a reorder. */
   const handleAdd = useCallback(() => {
     if (atCapacity) return
-    const hsl = distinctFrom(
-      oppositeHsl(selected.hsl),
-      pins.map((p) => p.hsl),
+    const colour = distinctFrom(
+      oppositeColour(selected.colour),
+      pins.map((p) => p.colour),
+      // A new colour is reachable in whatever space is being edited in.
+      gamutFor(modeById(settings.mode)),
     )
-    const pin: Pin = { id: newId(), hsl }
+    const pin: Pin = { id: newId(), colour }
     const after = pins.findIndex((p) => p.id === selected.id) + 1
     commit([...pins.slice(0, after), pin, ...pins.slice(after)])
     setSelectedId(pin.id)
-  }, [atCapacity, commit, pins, selected])
+  }, [atCapacity, commit, pins, selected, settings.mode])
 
   const handleChange = useCallback(
-    (next: Hsl) => {
+    (next: Colour) => {
       const id = selected.id
       commit(
-        pins.map((p) => (p.id === id ? { ...p, hsl: next } : p)),
+        pins.map((p) => (p.id === id ? { ...p, colour: next } : p)),
         `edit:${id}`,
       )
     },
@@ -82,20 +90,47 @@ export function App() {
       setSelectedId(remaining[Math.min(index, remaining.length - 1)].id)
       return
     }
-    const fresh: Pin = { id: newId(), hsl: randomHsl() }
+    const fresh: Pin = { id: newId(), colour: randomColour() }
     commit([fresh])
     setSelectedId(fresh.id)
   }, [commit, pins, selected])
 
+  /**
+   * The colour space is the palette's, not the selected colour's, so changing it
+   * has to answer for all of them. Only ever lossy one way — every sRGB colour
+   * has an OKLCH reading — so this asks on the way in, and only when there is
+   * something to lose. Answering yes performs the clamp the warning describes
+   * rather than leaving colours in a space that cannot name them, as one commit
+   * so a single undo takes it back.
+   */
+  const handleModeChange = useCallback(
+    (mode: ModeId) => {
+      const next = modeById(mode)
+      const affected = clampCount(
+        next,
+        pins.map((p) => p.colour),
+      )
+      if (affected > 0) {
+        const many = affected > 1
+        const ok = window.confirm(
+          `Switch to ${next.label}?\n\n` +
+            `${affected} ${many ? 'colours are' : 'colour is'} outside sRGB, which ` +
+            `${next.label} can't describe. ${many ? 'Each will' : 'It will'} be replaced by ` +
+            `the nearest colour that fits.`,
+        )
+        if (!ok) return
+        commit(pins.map((p) => ({ ...p, colour: toGamut(p.colour, 'srgb') })))
+      }
+      setSettings((s) => ({ ...s, mode }))
+    },
+    [commit, pins],
+  )
+
   /** The whole palette, rewritten from the text list in one step. Ids are kept
    *  by position so the selection survives an edit that leaves it in place. */
   const handleEditList = useCallback(
-    (hexes: string[]) => {
-      const next: Pin[] = []
-      hexes.forEach((hex, i) => {
-        const hsl = hexToHsl(hex)
-        if (hsl) next.push({ id: pins[i]?.id ?? newId(), hsl })
-      })
+    (colours: Colour[]) => {
+      const next = colours.map((colour, i) => ({ id: pins[i]?.id ?? newId(), colour }))
       if (next.length > 0) commit(next)
     },
     [commit, pins],
@@ -122,7 +157,7 @@ export function App() {
     if (!ok) return
 
     clearStorage()
-    const fresh: Pin = { id: newId(), hsl: randomHsl() }
+    const fresh: Pin = { id: newId(), colour: randomColour() }
     reset([fresh])
     setSelectedId(fresh.id)
     setSettings(DEFAULT_SETTINGS)
@@ -156,10 +191,22 @@ export function App() {
         onRedo={redo}
         onReset={handleReset}
         auditing={auditing}
+        vision={vision}
         onToggleAudit={() => setAuditing((on) => !on)}
       />
       {auditing ? (
-        <ContrastAudit pins={pins} onExit={() => setAuditing(false)} />
+        <ContrastAudit
+          pins={pins}
+          vision={vision}
+          spec={settings.spec}
+          weight={settings.weight}
+          gamut={settings.gamut}
+          onVisionChange={setVision}
+          onSpecChange={(spec: Spec) => setSettings({ ...settings, spec })}
+          onWeightChange={(weight: Weight) => setSettings({ ...settings, weight })}
+          onGamutChange={(gamut: Gamut) => setSettings({ ...settings, gamut })}
+          onExit={() => setAuditing(false)}
+        />
       ) : (
         <main className="panes">
           <PinnedPane
@@ -168,9 +215,15 @@ export function App() {
             showAdd={!atCapacity}
             onSelect={setSelectedId}
             onAdd={handleAdd}
+            onDelete={handleDeleteSelected}
             onReorder={handleReorder}
           />
-          <Editor colour={selected.hsl} onChange={handleChange} onDelete={handleDeleteSelected} />
+          <Editor
+            colour={selected.colour}
+            mode={settings.mode}
+            onChange={handleChange}
+            onModeChange={handleModeChange}
+          />
         </main>
       )}
     </div>

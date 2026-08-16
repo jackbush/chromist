@@ -1,32 +1,38 @@
 import { useCallback, useRef, useState } from 'react'
-import type { Pin, Settings } from '../types'
+import type { Colour, Pin, Settings } from '../types'
+import type { Vision } from '../cvd'
 import { OTHER_THEME } from '../types'
 import { buildShareUrl } from '../urlHash'
 import { COPIED_MS, copy } from '../clipboard'
 import { EditColoursDialog } from './EditColoursDialog'
 import {
-  ClipboardIcon,
   ContrastIcon,
   MoonIcon,
   PencilIcon,
+  QuestionIcon,
   RedoIcon,
-  ShareIcon,
+  LinkIcon,
   SunIcon,
   TrashIcon,
   UndoIcon,
 } from './icons'
 
+/** The readme is the manual: what each colour space is for, what the audit's
+ *  two specifications disagree about, and why the app is built the way it is. */
+const HELP_URL = 'https://github.com/jackbush/chromist#readme'
+
 type Props = {
   pins: Pin[]
   settings: Settings
   onSettingsChange: (settings: Settings) => void
-  onEditList: (hexes: string[]) => void
+  onEditList: (colours: Colour[]) => void
   canUndo: boolean
   canRedo: boolean
   onUndo: () => void
   onRedo: () => void
   onReset: () => void
   auditing: boolean
+  vision: Vision
   onToggleAudit: () => void
 }
 
@@ -41,6 +47,7 @@ export function ActionBar({
   onRedo,
   onReset,
   auditing,
+  vision,
   onToggleAudit,
 }: Props) {
   const [editing, setEditing] = useState(false)
@@ -54,34 +61,40 @@ export function ActionBar({
   // You share the screen you're on, so a link copied from the audit opens on
   // the audit — same palette, same reading of it.
   const handleCopyLink = useCallback(async () => {
-    await copy(buildShareUrl(pins, auditing))
+    await copy(
+      buildShareUrl(pins, {
+        audit: auditing,
+        vision,
+        spec: settings.spec,
+        weight: settings.weight,
+        gamut: settings.gamut,
+      }),
+    )
     setCopied(true)
     if (flashTimer.current) window.clearTimeout(flashTimer.current)
     flashTimer.current = window.setTimeout(() => setCopied(false), COPIED_MS)
-  }, [auditing, pins])
-
-  const shareLabel = auditing ? 'Share this audit' : 'Share this palette'
+  }, [auditing, pins, settings.gamut, settings.spec, settings.weight, vision])
 
   return (
     <header className="bar">
-      <h1 className="bar-title">
+      <h1 className="bar-title">Chromist</h1>
+
+      {/* Read left to right: the three ways of working on the palette, then
+          reset, then the pair for taking an edit back and the theme switch.
+          The first four carry their names where there is room for them; the
+          last three are common enough to go without. */}
+      <div className="bar-actions">
         <button
           type="button"
-          className={`bar-share${copied ? ' is-copied' : ''}`}
-          onClick={handleCopyLink}
-          title={auditing ? 'Copy a link to this audit' : 'Copy a link to this palette'}
+          className="bar-btn"
+          onClick={() => setEditing(true)}
+          aria-haspopup="dialog"
+          aria-label="Edit colours"
+          title="Edit colours"
         >
-          <ShareIcon size={14} />
-          {shareLabel}
-          <ClipboardIcon size={14} className="clip" />
+          <PencilIcon />
+          <span className="bar-label">Edit</span>
         </button>
-      </h1>
-
-      {/* Read left to right: the two ways of looking at the palette, then the
-          two ways of taking an edit back, then the two that change the app
-          rather than the colours — the most destructive one furthest from the
-          ones you press without thinking. */}
-      <div className="bar-actions">
         {/* A mode, not a window: the button stays lit for as long as you're in
             it, and pressing it again is the way out. */}
         <button
@@ -93,16 +106,28 @@ export function ActionBar({
           title={auditing ? 'Leave the accessibility audit' : 'Accessibility audit'}
         >
           <ContrastIcon />
+          <span className="bar-label">Audit</span>
+        </button>
+        {/* You share the screen you are on, so the label says which. */}
+        <button
+          type="button"
+          className={`bar-btn${copied ? ' is-copied' : ''}`}
+          onClick={handleCopyLink}
+          aria-label={auditing ? 'Copy a link to this audit' : 'Copy a link to this palette'}
+          title={auditing ? 'Copy a link to this audit' : 'Copy a link to this palette'}
+        >
+          <LinkIcon />
+          <span className="bar-label">Copy link</span>
         </button>
         <button
           type="button"
           className="bar-btn"
-          onClick={() => setEditing(true)}
-          aria-haspopup="dialog"
-          aria-label="Edit colours"
-          title="Edit colours"
+          onClick={onReset}
+          aria-label="Reset everything"
+          title="Reset everything"
         >
-          <PencilIcon />
+          <TrashIcon />
+          <span className="bar-label">Reset</span>
         </button>
         <button
           type="button"
@@ -124,15 +149,18 @@ export function ActionBar({
         >
           <RedoIcon />
         </button>
-        <button
-          type="button"
+        {/* An anchor, not a button: it goes somewhere, so a middle-click or a
+            modifier should open it the way any other link would. */}
+        <a
           className="bar-btn"
-          onClick={onReset}
-          aria-label="Reset everything"
-          title="Reset everything"
+          href={HELP_URL}
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label="Help"
+          title="Help"
         >
-          <TrashIcon />
-        </button>
+          <QuestionIcon />
+        </a>
         <button
           type="button"
           className="bar-btn"

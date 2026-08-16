@@ -1,9 +1,9 @@
 import { useCallback, useLayoutEffect, useRef, useState } from 'react'
 import type { Pin } from '../types'
-import { hslToCss, hslToHex } from '../color'
+import { cssVars, isWide, toHex } from '../color'
 import { COPIED_MS, copy } from '../clipboard'
 import { useIsDesktop } from '../hooks/useIsDesktop'
-import { ClipboardIcon } from './icons'
+import { ClipboardIcon, XIcon } from './icons'
 
 type Props = {
   pins: Pin[]
@@ -11,6 +11,7 @@ type Props = {
   showAdd: boolean
   onSelect: (id: string) => void
   onAdd: () => void
+  onDelete: () => void
   onReorder: (from: number, to: number) => void
 }
 
@@ -27,7 +28,15 @@ type Drag = {
   moved: boolean
 }
 
-export function PinnedPane({ pins, selectedId, showAdd, onSelect, onAdd, onReorder }: Props) {
+export function PinnedPane({
+  pins,
+  selectedId,
+  showAdd,
+  onSelect,
+  onAdd,
+  onDelete,
+  onReorder,
+}: Props) {
   const isDesktop = useIsDesktop()
   const containerRef = useRef<HTMLDivElement>(null)
   const [copied, setCopied] = useState<string | null>(null)
@@ -98,8 +107,47 @@ export function PinnedPane({ pins, selectedId, showAdd, onSelect, onAdd, onReord
     applyDragTransform()
   })
 
+  /**
+   * The cell runs the width of the stripe on desktop, and almost none of that is
+   * the code. A press out in the empty part means the colour, not the clipboard
+   * — so the copy is only offered within reach of the characters themselves.
+   */
+  const HIT_SLOP = 8
+
+  /** Whether the pointer is close enough to the code for the copy to be what is
+   *  meant. One predicate, used by the click and by the hover mark together —
+   *  the offer and the action have to describe the same region or the cell
+   *  lies about what a press will do. */
+  const nearCode = (e: { clientX: number; clientY: number }, cell: HTMLElement) => {
+    const code = cell.querySelector('.pin-code')?.getBoundingClientRect()
+    return (
+      !!code &&
+      e.clientX >= code.left - HIT_SLOP &&
+      e.clientX <= code.right + HIT_SLOP &&
+      e.clientY >= code.top - HIT_SLOP &&
+      e.clientY <= code.bottom + HIT_SLOP
+    )
+  }
+
+  const onHexClick = (e: React.MouseEvent<HTMLButtonElement>, pin: Pin) => {
+    if (nearCode(e, e.currentTarget)) handleCopy(pin)
+    else onSelect(pin.id)
+  }
+
+  /** The cell the clipboard is currently offered on. Only ever one, so this is a
+   *  single id rather than a flag per pin. */
+  const [armed, setArmed] = useState<string | null>(null)
+
+  const onHexMove = (e: React.PointerEvent<HTMLButtonElement>, pin: Pin) => {
+    // Touch has no hover to give; it keeps the mark for a focus or a copy, the
+    // way it did before there was a hover state to restrict.
+    if (e.pointerType !== 'mouse') return
+    const near = nearCode(e, e.currentTarget)
+    setArmed((was) => (near ? pin.id : was === pin.id ? null : was))
+  }
+
   const handleCopy = useCallback(async (pin: Pin) => {
-    await copy(hslToHex(pin.hsl))
+    await copy(toHex(pin.colour))
     // Silent, as specified — the cell flashes, and the clipboard mark shows
     // just long enough to be read before it times itself out.
     setCopied(pin.id)
@@ -183,8 +231,11 @@ export function PinnedPane({ pins, selectedId, showAdd, onSelect, onAdd, onReord
     <section className="pins" aria-label="Pinned colours">
       <div className="pins-track" ref={containerRef}>
         {pins.map((pin, index) => {
-          const hex = hslToHex(pin.hsl)
+          const hex = toHex(pin.colour)
           const selected = pin.id === selectedId
+          // A colour past sRGB is shown both ways at once: most of the swatch as
+          // it really is, and a strip of what a narrower screen will make of it.
+          const split = isWide(pin.colour)
           return (
             <div
               key={pin.id}
@@ -199,19 +250,21 @@ export function PinnedPane({ pins, selectedId, showAdd, onSelect, onAdd, onReord
                 type="button"
                 className={`pin-hex${selected ? ' is-selected' : ''}${
                   copied === pin.id ? ' is-copied' : ''
-                }`}
-                onClick={() => handleCopy(pin)}
+                }${armed === pin.id ? ' is-armed' : ''}`}
+                onClick={(e) => onHexClick(e, pin)}
+                onPointerMove={(e) => onHexMove(e, pin)}
+                onPointerLeave={() => setArmed((was) => (was === pin.id ? null : was))}
                 title="Copy to clipboard"
               >
-                {hex.toUpperCase()}
+                <span className="pin-code">{hex.toUpperCase()}</span>
                 <ClipboardIcon size={12} />
               </button>
               <div
-                className="pin-swatch"
-                style={{ background: hslToCss(pin.hsl) }}
+                className={`pin-swatch${split ? ' is-split' : ''}`}
+                style={cssVars(pin.colour)}
                 role="button"
                 tabIndex={0}
-                aria-label={`Edit colour ${hex}`}
+                aria-label={`Edit colour ${hex}${split ? ', outside sRGB' : ''}`}
                 aria-pressed={selected}
                 onPointerDown={(e) => onPointerDown(e, pin, index)}
                 onPointerMove={onPointerMove}
@@ -223,7 +276,32 @@ export function PinnedPane({ pins, selectedId, showAdd, onSelect, onAdd, onReord
                     onSelect(pin.id)
                   }
                 }}
-              />
+              >
+                {/* Only on the colour being edited, and inside the swatch rather
+                    than beside the picker: it acts on this colour, so it belongs
+                    on it. */}
+                {split && (
+                  <span className="pin-split" aria-hidden="true">
+                    P3 • sRGB
+                  </span>
+                )}
+                {selected && (
+                  <button
+                    type="button"
+                    className="pin-remove"
+                    // The swatch owns the drag gesture; this must not start one.
+                    onPointerDown={(e) => e.stopPropagation()}
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      onDelete()
+                    }}
+                    aria-label={`Remove colour ${hex}`}
+                    title="Remove colour"
+                  >
+                    <XIcon size={14} />
+                  </button>
+                )}
+              </div>
             </div>
           )
         })}
