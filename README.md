@@ -1,30 +1,86 @@
 # Chromist
-Get your colours right.
+**[Get your colours right.](https://jackbush.github.io/chromist/)**
 
-- **Import your palette.** Paste your colours in as text.
-- **Six ways to edit.** HSL, HSB, HWB, OKHSL, OKLCH and LCh, one control.
-- **Accessibility audit.** Every combination, read against WCAG 2.2 or the 3.0
-  draft, at any font weight, with colour-blindness simulation over the lot.
-- **Share with anyone.** One link, to anyone. No account or sign-up.
-- **Private.** No backend, accounts, database or analytics.
+Build or import a palette, edit it in the space that suits the job, and read
+every colour against every other one — under WCAG 2.2, under the WCAG 3.0 draft,
+at any font weight, through any kind of colour vision. No account, no backend,
+no analytics.
 
-## Actions
+## Features
+
+**Perceptual colour, by default.** Colours are held as OKLab and edited in
+OKHSL. Lightness means the same thing at every hue, so a ramp that looks even
+*is* even — unlike HSL, where `hsl(60 100% 50%)` and `hsl(240 100% 50%)` both
+claim 50% and are nowhere near each other. The older spaces are all here too,
+for pasting numbers in and out of tools that speak them.
+
+**Display P3.** OKLCH and LCh reach past sRGB. A colour that does is drawn twice
+in one stripe — most of it as it really is, and a band of what a narrower screen
+will make of it — with the boundary marked across the picker so you can see
+exactly where you left sRGB behind.
+
+**An audit that answers the question you had.** Every colour as text over every
+colour as background, both ways round:
+
+- **WCAG 2.2** gives the level — AAA, AA, AA+ or FAIL — and the contrast ratio.
+  That is what conformance means and what you are held to.
+- **WCAG 3.0 (draft)** runs APCA and reports the *smallest font size that
+  passes*, which is the thing you actually needed to know. It is polarity-aware,
+  so light-on-dark scores differently from dark-on-light and the grid stops
+  being symmetric.
+- **Font weight feeds both.** 2.2 needs it to know where large text begins, APCA
+  to pick a column of its table.
+- **Colour-vision simulation** over the whole grid: protanopia, deuteranopia,
+  tritanopia.
+- **Gamut**, so you can read the palette as sRGB will render it rather than as
+  your screen does.
+- **"Same colour" detection**, which neither specification covers: a pair within
+  a just-noticeable difference of each other is flagged as one colour, not as
+  low contrast. Under simulation this turns up constantly.
+
+Every verdict is set in the two colours it describes, at the weight you chose
+and at the size it is claiming — so the grid is its own evidence rather than a
+description of some.
+
+**Text in, text out.** Paste a list of colours in any notation CSS understands;
+every line that can't be read is named rather than dropped. Any hex or value
+copies with one click.
+
+**Share with a link.** The palette and the way you are reading it both ride in
+the URL. Send it to anyone; there is nothing to sign up to. Everything else
+stays in your browser's local storage.
+
+**Accessible itself.** Full keyboard operation including reordering, real modal
+dialogs, focus that goes where it should, status messages announced, honoured
+`prefers-reduced-motion`, and pinch-zoom left alone. See
+[Accessibility](#accessibility).
+
+## Using it
 
 Click a hex code to copy it, click a stripe to edit it, drag to reorder, `+` to
-add a colour beside the selected one. `cmd`/`ctrl` + `Z` undoes.
+add a colour beside the selected one.
 
 Above the picker: the colour space, the value in it, and a button to copy that
 value. The square and the slider are the same control in every space — only what
 their axes mean changes. The field reads anything CSS can express and writes the
 current space's notation.
 
-The bar, left to right: edit as text, audit, share link, reset, undo, redo, help,
-light/dark. Reset is the only one that can't be undone, and it asks first.
+The bar, left to right: edit as text, audit, share link, reset, undo, redo,
+help, light/dark. Reset is the only one that can't be undone, and it asks first.
 
-In the audit: the specification, the font weight, and which eye to read it
-through. Weight feeds both specifications — 2.2 needs it to know where large
-text begins, 3.0 to pick a column of the APCA table — so a cell can finally
-answer how small the text may be rather than leaving you to guess.
+In the audit: the specification, the font weight, the gamut, and which eye to
+read it through. On a phone those four sit behind one **Accessibility audit
+settings** button, so the grid gets the screen.
+
+| Key | What it does |
+| --- | ------------ |
+| `cmd`/`ctrl` + `Z` | Undo — add `shift` to redo |
+| `alt` + arrow | Move the focused colour along the palette |
+| Arrow (on the picker) | Nudge — `shift` for ten times the step |
+| `Enter` (on a hex cell) | Copy it |
+| `cmd`/`ctrl` + `Enter` | Apply, in the edit dialog |
+| `Escape` | Close a dialog, or leave the audit |
+| `Tab` (from the top) | Skip past the bar to the palette |
 
 ## Colour spaces
 
@@ -34,7 +90,7 @@ which two, and whether every point in the square is a colour you can have.
 | Space | Square | Why this one |
 | ----- | ------ | ------------ |
 | **OKHSL** | S × L | The default. Perceptual, so lightness means the same at every hue — and the only perceptual space here whose square has no unreachable corner. |
-| **HSL** | S × L | What CSS and every other tool speak. Familiar, and dishonest: `hsl(60 100% 50%)` and `hsl(240 100% 50%)` claim the same lightness and are nowhere near it. |
+| **HSL** | S × L | What CSS and every other tool speak. Familiar, and dishonest about lightness. |
 | **HSB** | S × B | Matches Figma, Photoshop and Sketch, so numbers pasted from them land where you expect. |
 | **HWB** | W × B | Tinting and shading as straight axes — the one to build a ramp off a single hue in. |
 | **OKLCH (P3)** | C × L | Perceptual and honest, and the numbers paste straight into CSS. Reaches past sRGB. |
@@ -43,7 +99,30 @@ which two, and whether every point in the square is a colour you can have.
 The two P3 spaces can name colours sRGB can't, and mark how far sRGB reached
 with a dashed line across the square. The other four are the sRGB cube
 relabelled and cannot leave it, which is why the space you pick is also the
-gamut you get — there is no separate switch for it.
+gamut you get — there is no separate switch for it. Switching to a space that
+can't describe what you have says so, and asks, before it moves anything.
+
+## Accessibility
+
+The app is built to the standard it measures. Every control is reachable and
+operable from the keyboard, including drag-to-reorder (`alt` + arrow). Dialogs
+are real `<dialog>` elements opened with `showModal`, so the page behind them is
+inert to the pointer, to `Tab` and to a screen reader alike, and focus returns
+to whatever opened them. Copies, moves and deletions are announced through a
+polite live region, because a flash of colour is not feedback for everyone.
+Focus rings are drawn two-tone over the swatches and picker, where the colour
+behind them is anyone's guess. Zoom is not disabled and no form control is under
+16px. `prefers-reduced-motion` stops the flashes as well as the transitions.
+
+Two things an automated report will raise, both deliberate:
+
+- **The audit grid fails contrast on purpose.** Each verdict is drawn in the pair
+  it is reporting on, at the size it is claiming. A cell that says FAIL being
+  hard to read *is the finding*. Scanning the grid as though it were ordinary UI
+  will return a page of violations that are all working as intended.
+- **The remove button reports as a 22px target.** It is drawn at 22px and
+  answers to 24px, via a transparent ring that tools measuring the painted box
+  cannot see.
 
 ## Construction
 
@@ -69,22 +148,26 @@ Pages. One-time setup: *Settings → Pages → Source → GitHub Actions*. `base
 also runs under `/chromist/`.
 
 ```
+site.config.ts     every title, description, icon and link-preview value
+vite/site-meta.ts  expands that into the head tags and the web manifest
 src/
-  App.tsx        state, and the wiring between the panes
-  types.ts       the type surface, including the canonical Colour
-  color.ts       parsing, opposite, random, de-duplication, ΔE
-  gamut.ts       what a screen can show: mapping, CSS output, the square
-  modes.ts       the six editing modes, as one table
-  cvd.ts         colour-vision deficiency simulation
-  storage.ts     localStorage, validating anything read back
-  urlHash.ts     share-link encoding and decoding
-  clipboard.ts   copy, with a fallback for non-secure origins
-  colourList.ts  the text form of a palette: parsing, validation, formatting
-  contrast.ts    WCAG ratio, the four bands the audit reports, and APCA
-  components/    PinnedPane, Editor, ChannelPicker, ActionBar,
-                 EditColoursDialog, ContrastAudit, icons
-  hooks/         useHistory, usePersistentState, useIsDesktop
-checks/logic.ts  assertions run by `npm run check`
+  App.tsx          state, the wiring between the panes, and what it asks first
+  types.ts         the type surface, including the canonical Colour
+  color.ts         parsing, opposite, random, de-duplication, ΔE
+  gamut.ts         what a screen can show: mapping, CSS output, the square
+  modes.ts         the six editing modes, as one table
+  cvd.ts           colour-vision deficiency simulation
+  contrast.ts      WCAG ratio, the four bands the audit reports, and APCA
+  colourList.ts    the text form of a palette: parsing, validation, formatting
+  storage.ts       localStorage, validating anything read back
+  urlHash.ts       share-link encoding and decoding
+  clipboard.ts     copy, with a fallback for non-secure origins
+  announce.ts      the live region everything speaks through
+  components/      PinnedPane, Editor, ChannelPicker, ActionBar, ContrastAudit,
+                   AuditSettings, EditColoursDialog, Modal, icons
+  hooks/           useHistory, usePersistentState, useIsDesktop,
+                   useKeyboardInset, useThemeColor
+checks/logic.ts    assertions run by `npm run check`
 ```
 
 ## Decisions
@@ -116,23 +199,20 @@ Things that look like mistakes until you know why.
   threshold is 2.3, the long-standing JND.
 - **One specification at a time.** 2.2 and 3.0 disagree by design, and showing a
   ratio next to an Lc invites reading the disagreement as a single verdict. 2.2
-  is the default and keeps the AAA / AA / AA+ vocabulary, because that is what
-  conformance means and what anyone is held to; 3.0 is labelled a draft and
-  reports what APCA actually answers — the smallest usable font size.
-- **The APCA font table is floored to its row, not interpolated.** The reference
-  ships a second table of deltas for interpolating within a band. Leaving it out
-  errs the only safe way: Lc 74 is answered as Lc 70, asking for 19.5px at
-  weight 400 where interpolating would allow about 18.2. Same rule `formatRatio`
-  follows — never advertise what hasn't been earned. Verified against apca-w3
-  0.1.9 across all 2169 Lc-and-weight combinations: identical at every row, and
-  never once smaller.
+  is the default and keeps the AAA / AA / AA+ vocabulary; 3.0 is labelled a
+  draft and reports what APCA actually answers — the smallest usable font size.
+- **The APCA font table is floored to its row, not interpolated**, and checked
+  against `apca-w3` rather than built on it. Flooring errs the only safe way:
+  Lc 74 is answered as Lc 70, asking for 19.5px at weight 400 where
+  interpolating would allow about 18.2 — the same rule `formatRatio` follows,
+  never advertise what hasn't been earned. Verified across all 2169
+  Lc-and-weight combinations: identical at every row, and never once smaller.
+  Fifty lines of arithmetic and a table of constants fixed by the spec beat a
+  dependency and its transitive one.
   - Watch the row spacing if you touch it. The table jumps Lc 0, 10, 15 and
     carries that offset for its whole length, so the index is
     `floor(Lc / 5) - 1`. Getting it wrong reads every answer one row too
     generous, silently.
-- **The implementation is checked against apca-w3, not built on it.** Fifty
-  lines of arithmetic and a table whose constants are fixed by the spec, against
-  a dependency and its transitive one.
 - **Lc keeps its sign.** The magnitude is the score, but WCAG 2's ratio reads the
   same both ways and APCA's doesn't — so under 2.2 the grid is symmetric across
   its diagonal and under 3.0 the two triangles are two different findings. The
@@ -144,14 +224,6 @@ Things that look like mistakes until you know why.
   finding is that its two colours are one colour has no third colour to say so
   in. The score above it stays in the pair's own colours, so when they are the
   same colour that band is simply blank — which is the finding.
-- **Writes are debounced.** Dragging in the picker fires a change per pointer
-  event, and Safari throws once `history.replaceState` passes ~100 calls per 30
-  seconds.
-- **`oppositeColour` is its own inverse**, which is why `+` filters its result
-  through `distinctFrom` — otherwise repeated presses alternate between two
-  colours. It stays exact and unclamped for that reason; fitting the result to a
-  gamut is `distinctFrom`'s job. That filter compares by ΔE rather than by hex,
-  since two colours a single bit apart are the same colour to look at.
 - **The audit replaces the panes rather than covering them.** It's a mode, not a
   dialog: nothing is trapped, the bar stays live, and the mode rides in the URL
   (`&a=1`, and `&v=deutan` for the simulation) but not into storage — it
@@ -160,17 +232,38 @@ Things that look like mistakes until you know why.
   value; the URL quantises to eight bits a channel, `rrggbb` for sRGB and
   `p3-rrggbb` for anything wider. That keeps every link ever shared working and
   the common case as short as it was, which is worth more than the last bit.
+- **Writes are debounced.** Dragging in the picker fires a change per pointer
+  event, and Safari throws once `history.replaceState` passes ~100 calls per 30
+  seconds.
 - **History coalescing is tag-based.** Commits sharing a tag within 400ms merge,
   which is what keeps one drag to one undo step. Untagged commits always stand
   alone.
+- **`oppositeColour` is its own inverse**, which is why `+` filters its result
+  through `distinctFrom` — otherwise repeated presses alternate between two
+  colours. It stays exact and unclamped for that reason; fitting the result to a
+  gamut is `distinctFrom`'s job. That filter compares by ΔE rather than by hex,
+  since two colours a single bit apart are the same colour to look at.
+- **One dialog component, and no `window.confirm`.** The editor, the audit
+  settings and both confirmations are the same `Modal`: one place where modality,
+  escape, focus return and the keyboard inset are dealt with, and questions that
+  can name their own action — "Switch", "Reset" — in the app's own type rather
+  than the browser's.
+- **`theme-color` follows the app's theme, not the system's.** The palette's
+  light/dark setting is its own, so a white app under a dark OS was leaving the
+  phone's browser bars black. The tags in the document answer per OS scheme,
+  which is all that can be known before the app boots; after that the app
+  rewrites them.
+- **All metadata lives in `site.config.ts`.** Title, description, icons, cover
+  image, theme colours and the web manifest are derived from one object at build
+  time. `index.html` carries none of it, so nothing can drift.
 - **The hover clipboard on a hex cell is absolutely positioned**, not a flex
   sibling, so the code stays dead centre. Its container query measures the
   *content box*, so the threshold looks smaller than the cell.
 - **Icons are [Phosphor](https://phosphoricons.com), regular weight** (MIT),
-  inlined in `components/icons.tsx` rather than installed — nine icons is a
-  short list. To add one, copy the **regular** SVG from
-  [phosphoricons.com](https://phosphoricons.com) and paste its `<path>` into a
-  new component there; any other weight sits at a different visual density.
-  Regular draws outlines as *filled* shapes on a 256 grid, so CSS that colours
-  an icon sets `color`, never `stroke`. If the list stops being short,
-  `npm i @phosphor-icons/react` — the wrapper exists so callers wouldn't change.
+  inlined in `components/icons.tsx` rather than installed. To add one, copy the
+  **regular** SVG from [phosphoricons.com](https://phosphoricons.com) and paste
+  its `<path>` into a new component there; any other weight sits at a different
+  visual density. Regular draws outlines as *filled* shapes on a 256 grid, so
+  CSS that colours an icon sets `color`, never `stroke`. If the list stops being
+  short, `npm i @phosphor-icons/react` — the wrapper exists so callers wouldn't
+  change.
