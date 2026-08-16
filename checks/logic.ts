@@ -28,7 +28,7 @@ function eq(label: string, actual: unknown, expected: unknown) {
 }
 
 console.log('\ncolour conversion')
-eq('theme neutral #4d4d4d -> hsl (achromatic hue must not be NaN)', hexToHsl('#4d4d4d'), { h: 0, s: 0, l: 30.19607843137255 })
+eq('mid grey -> hsl (achromatic hue must not be NaN)', hexToHsl('#4d4d4d'), { h: 0, s: 0, l: 30.19607843137255 })
 eq('black', hexToHsl('#000000'), { h: 0, s: 0, l: 0 })
 eq('white', hexToHsl('#ffffff'), { h: 0, s: 0, l: 100 })
 eq('pure red round trip', hslToHex({ h: 0, s: 100, l: 50 }), '#ff0000')
@@ -44,7 +44,7 @@ console.log('\nopposite colour')
   eq('black -> white', opp('#000000'), '#ffffff')
   eq('white -> black', opp('#ffffff'), '#000000')
   // The reason lightness is mirrored rather than hue simply rotated: a plain
-  // rotation is a no-op on every neutral, and the themes are all neutral.
+  // rotation is a no-op on any grey, and both themes are grey.
   eq('grey moves', opp('#4d4d4d'), '#b2b2b2')
 
   const before = hexToHsl('#2e86ab')!
@@ -138,6 +138,12 @@ store.set(
 const loaded = load()
 eq('malformed pins filtered out', loaded.pins.length, 1)
 eq('unknown theme falls back to the default', loaded.settings.theme, DEFAULT_SETTINGS.theme)
+
+// The retired theme reaches this code as an unknown name, so anyone still
+// holding it lands on the dark default rather than a theme that no longer has
+// any colours behind it.
+store.set('chromist.v1', JSON.stringify({ pins: [], settings: { theme: 'neutral' } }))
+eq('a retired theme falls back to dark', load().settings.theme, 'black')
 eq('settings from older builds drop unknown keys', loaded.settings, DEFAULT_SETTINGS)
 save({ pins: [{ id: 'a', hsl: { h: 1, s: 2, l: 3 } }], settings: DEFAULT_SETTINGS })
 eq('save round trips', load().pins[0].id, 'a')

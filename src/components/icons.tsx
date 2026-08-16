@@ -76,12 +76,24 @@ export function ShareIcon(props: IconProps) {
   )
 }
 
-/** Sliders — squared off, where a cog would have to be all curves. */
-export function SettingsIcon(props: IconProps) {
+/** Sun — a diamond for the disc, since a circle would be the one curve in the
+ *  set, with rays on the axes and the diagonals. */
+export function SunIcon(props: IconProps) {
   return (
     <Icon {...props}>
-      <path d="M3 7h18M3 17h18" />
-      <path d="M8 4v6M16 14v6" />
+      <path d="M12 7 17 12 12 17 7 12Z" />
+      <path d="M12 2v2M12 20v2M2 12h2M20 12h2" />
+      <path d="m5 5 2 2M17 17l2 2M19 5l-2 2M5 19l2-2" />
+    </Icon>
+  )
+}
+
+/** Crescent — the same curve drawn as a chamfered sliver: a straight back, a
+ *  straight belly four units inside it, and a point at each end. */
+export function MoonIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <path d="M13 3 7 9v6l6 6-2-2V5Z" />
     </Icon>
   )
 }

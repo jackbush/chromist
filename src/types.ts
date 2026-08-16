@@ -3,14 +3,21 @@ export type Hsl = { h: number; s: number; l: number }
 
 export type Pin = { id: string; hsl: Hsl }
 
-export type ThemeName = 'neutral' | 'black' | 'white'
+/** Two, and the app opens on the dark one. */
+export type ThemeName = 'black' | 'white'
 
 export type Settings = { theme: ThemeName }
 
 export const MAX_PINS = 7
 
-export const THEMES: Record<ThemeName, { bg: string; fg: string; label: string }> = {
-  neutral: { bg: '#4d4d4d', fg: '#000000', label: 'Neutral' },
-  black: { bg: '#000000', fg: '#ffffff', label: 'Black' },
-  white: { bg: '#ffffff', fg: '#000000', label: 'White' },
+/** The colours themselves live in the stylesheet; this is the list of names
+ *  that are real, which is what a stored setting is checked against. */
+export const THEMES: Record<ThemeName, { bg: string; fg: string }> = {
+  black: { bg: '#000000', fg: '#ffffff' },
+  white: { bg: '#ffffff', fg: '#000000' },
+}
+
+export const OTHER_THEME: Record<ThemeName, ThemeName> = {
+  black: 'white',
+  white: 'black',
 }

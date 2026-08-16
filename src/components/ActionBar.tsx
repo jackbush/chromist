@@ -1,16 +1,17 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useRef, useState } from 'react'
 import type { Pin, Settings } from '../types'
+import { OTHER_THEME } from '../types'
 import { buildShareUrl } from '../urlHash'
 import { COPIED_MS, copy } from '../clipboard'
-import { SettingsPopover } from './SettingsPopover'
 import { EditColoursDialog } from './EditColoursDialog'
 import {
   ClipboardIcon,
+  MoonIcon,
   PencilIcon,
   RedoIcon,
   ResetIcon,
-  SettingsIcon,
   ShareIcon,
+  SunIcon,
   UndoIcon,
 } from './icons'
 
@@ -37,29 +38,13 @@ export function ActionBar({
   onRedo,
   onReset,
 }: Props) {
-  const [open, setOpen] = useState(false)
   const [editing, setEditing] = useState(false)
   const [copied, setCopied] = useState(false)
-  const wrapRef = useRef<HTMLDivElement>(null)
   const flashTimer = useRef<number | null>(null)
 
-  useEffect(() => {
-    if (!open) return
-
-    const onPointerDown = (e: PointerEvent) => {
-      if (!wrapRef.current?.contains(e.target as Node)) setOpen(false)
-    }
-    const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setOpen(false)
-    }
-
-    document.addEventListener('pointerdown', onPointerDown)
-    document.addEventListener('keydown', onKeyDown)
-    return () => {
-      document.removeEventListener('pointerdown', onPointerDown)
-      document.removeEventListener('keydown', onKeyDown)
-    }
-  }, [open])
+  // The icon is the destination, not the current state: on black you see the
+  // sun you're about to switch to.
+  const dark = settings.theme === 'black'
 
   const handleCopyLink = useCallback(async () => {
     await copy(buildShareUrl(pins))
@@ -114,19 +99,15 @@ export function ActionBar({
         >
           <RedoIcon />
         </button>
-        <div className="bar-settings" ref={wrapRef}>
-          <button
-            type="button"
-            className="bar-btn"
-            aria-label="Settings"
-            aria-expanded={open}
-            aria-haspopup="dialog"
-            onClick={() => setOpen((v) => !v)}
-          >
-            <SettingsIcon />
-          </button>
-          {open && <SettingsPopover settings={settings} onChange={onSettingsChange} />}
-        </div>
+        <button
+          type="button"
+          className="bar-btn"
+          onClick={() => onSettingsChange({ ...settings, theme: OTHER_THEME[settings.theme] })}
+          aria-label={dark ? 'Switch to light mode' : 'Switch to dark mode'}
+          title={dark ? 'Switch to light mode' : 'Switch to dark mode'}
+        >
+          {dark ? <SunIcon /> : <MoonIcon />}
+        </button>
 
         <button
           type="button"
