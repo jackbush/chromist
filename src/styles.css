@@ -218,9 +218,13 @@ body {
 }
 
 /* Fixed at one seventh however many colours there are, so the add column never
-   moves and the colours take all the remaining space. */
+   moves and the colours take all the remaining space. The colours need no rules
+   between them — they are their own edges — but the add column is chrome, not
+   palette, so it is ruled off like everything else that isn't a colour. Mobile
+   lays the track out in a row, so the line stands up beside it. */
 .pin-add {
   flex: 0 0 calc(100% / 7);
+  border-left: 1px solid var(--fg);
 }
 
 .pin-hex {
@@ -396,10 +400,13 @@ body {
   box-shadow: none;
 }
 
+/* Ruled off from the square above it at the same weight as the pane divider:
+   two bands of colour meeting edge to edge otherwise read as one surface. */
 .editor-picker .react-colorful__hue {
   flex: 0 0 auto;
   height: 2.75rem;
   border-radius: 0;
+  border-top: 1px solid var(--fg);
 }
 
 .editor-picker .react-colorful__pointer {
@@ -598,6 +605,11 @@ body {
   width: 100%;
   border-collapse: separate; /* collapse drops borders on sticky cells */
   border-spacing: 0;
+  /* Every row is worth exactly as much as the others: the space left under the
+     header split by the number of colours, and never below the floor — past
+     which the grid scrolls instead of squeezing. One colour is the same
+     expression with nothing to divide by, so it takes the lot. */
+  --row-h: max(calc(5rem + 1px), calc((100cqh - 2rem - 1px) / var(--rows, 1)));
 }
 
 /* Labels hold their edge while the grid scrolls under them, so a cell in the
@@ -636,6 +648,14 @@ body {
   z-index: 3;
 }
 
+/* The label column is a label, not a share of the table. Asking for 1% of the
+   width holds it at its own content — one hex and its padding — and hands the
+   rest to the cells, so two colours read at the same gutter as seven. */
+.audit-corner,
+.audit-grid tbody .audit-head {
+  width: 1%;
+}
+
 /* The cell carries the row colour itself, so the column never shows a seam of
    theme background between the score and the ratio strip. */
 .audit-cell {
@@ -648,17 +668,21 @@ body {
   border-bottom: 1px solid var(--fg);
 }
 
+/* The diagonal has no score to stand the row up, so it carries the height
+   itself. With one colour that cell is the whole grid, and this is what makes
+   it fill the pane rather than sit as a strip under the header. */
+.audit-cell.is-same {
+  height: calc(var(--row-h) - 1px);
+}
+
 /* The verdict over the number that earned it, both centred in their own band.
-   Every row is the same height because they all resolve the same expression:
-   the space left under the header split by the number of colours, and never
-   below the floor — past which the grid scrolls instead of squeezing. Sizing
-   the band rather than the row keeps the table out of it; asked to fill a
-   height itself, it hands the surplus to whichever row asks first. */
+   Sizing the band rather than the row keeps the table out of it; asked to fill
+   a height itself, it hands the surplus to whichever row asks first. */
 .audit-score {
   display: flex;
   align-items: center;
   justify-content: center;
-  height: max(3.5rem, calc((100cqh - 2rem - 1px) / var(--rows, 1) - 1.5rem - 1px));
+  height: calc(var(--row-h) - 1.5rem - 1px);
   /* 14pt bold — the smaller of WCAG's two definitions of large text, and so
      the size at which an AA+ actually holds. */
   font-size: 1.1667rem;
@@ -730,6 +754,13 @@ body {
 
   .pin {
     flex-direction: row;
+  }
+
+  /* The add column's rule turns with the track: the stripes stack downwards
+     now, so the line lies across the top of it. */
+  .pin-add {
+    border-left: 0;
+    border-top: 1px solid var(--fg);
   }
 
   /* Wide enough for the centred code plus the hover clipboard beside it. */
