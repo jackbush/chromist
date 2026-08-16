@@ -120,10 +120,10 @@ const store = new Map<string, string>()
 }
 eq('default theme is black', DEFAULT_SETTINGS.theme, 'black')
 eq('empty storage -> defaults', load(), { pins: [], settings: DEFAULT_SETTINGS })
-store.set('palette-builder.v1', '{ not json')
+store.set('chromist.v1', '{ not json')
 eq('corrupt json -> defaults', load(), { pins: [], settings: DEFAULT_SETTINGS })
 store.set(
-  'palette-builder.v1',
+  'chromist.v1',
   JSON.stringify({
     pins: [
       { id: 'a', hsl: { h: 1, s: 2, l: 3 } },

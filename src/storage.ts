@@ -1,7 +1,7 @@
 import type { Pin, Settings, ThemeName } from './types'
 import { MAX_PINS, THEMES } from './types'
 
-const KEY = 'palette-builder.v1'
+const KEY = 'chromist.v1'
 
 type Stored = { pins: Pin[]; settings: Settings }
 

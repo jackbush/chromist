@@ -1,4 +1,4 @@
-# Palette Builder — Implementation Plan
+# Chromist — Implementation Plan
 
 ## Decisions locked
 
