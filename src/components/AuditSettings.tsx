@@ -97,13 +97,8 @@ export function AuditSettingsDialog({
   return (
     <Modal
       title="Accessibility audit settings"
-      titleId="audit-settings-title"
       onClose={onClose}
-      actions={
-        <button type="button" className="dialog-btn is-primary" onClick={onClose}>
-          Done
-        </button>
-      }
+      primary={{ label: 'Done', onClick: onClose }}
     >
       {/* One setting per line, and one grid across all four so the controls
           line up under each other rather than each starting wherever its own

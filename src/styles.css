@@ -666,6 +666,9 @@ body {
   inset: 0;
   z-index: 20;
   display: flex;
+  /* The card sits in the middle of the screen it is covering. */
+  align-items: center;
+  justify-content: center;
   /* Stretched by its own inset, which is what `auto` means for a fixed box with
      all four sides pinned. Both of the obvious alternatives are wrong: the
      element's own `fit-content` sizes it to its contents, and `100%` resolves
@@ -686,14 +689,22 @@ body {
   background: rgb(0 0 0 / 0.45);
 }
 
-/* On a phone the dialog is the screen: a textarea is the whole task, and a
-   floating card would only hand the keyboard something to cover. */
+/* A card of a set width, as tall as whatever it holds: a question is two lines
+   and a palette is seven, and neither should be padded out to the height of a
+   screen to say so. It has an edge because it no longer runs to one. */
 .dialog {
-  flex: 1;
   display: flex;
   flex-direction: column;
   gap: 0.875rem;
+  width: 30rem;
+  /* Room to breathe at the sides on anything narrower, which on a small screen
+     is what keeps an alert a card rather than a takeover. */
+  max-width: 90%;
+  max-height: 90%;
   padding: 1rem;
+  border: 1px solid var(--fg);
+  border-radius: 2px;
+  box-shadow: 0 6px 24px rgb(0 0 0 / 0.3);
   /* --keyboard-inset is what the on-screen keyboard is covering (see
      useKeyboardInset): iOS leaves the dialog its full height and puts the
      keyboard on top, so the foot of the dialog steps up out of its way. The
@@ -703,6 +714,22 @@ body {
   background: var(--bg);
   color: var(--fg);
   overflow: hidden;
+}
+
+/* Fields need the whole of a small screen. The keyboard takes half of what is
+   left, and a floating card inside that is a letterbox — so below the width
+   where the two can share, the form is the screen. An alert has nothing to type
+   into and stays a card at every size. */
+@media (max-width: 539px) {
+  .dialog.is-form {
+    width: 100%;
+    max-width: none;
+    height: 100%;
+    max-height: none;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+  }
 }
 
 /* The part that gives: with the keyboard up there may be less room than the
@@ -718,16 +745,16 @@ body {
 }
 
 .dialog-title {
-  font-size: 0.6875rem;
-  font-weight: 400;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  opacity: 0.65;
+  font-size: 1rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
 }
 
 .dialog-note {
   font-size: 0.8125rem;
   letter-spacing: 0.04em;
+  /* Secondary to the heading, and still 8:1 against the paper. */
+  opacity: 0.7;
 }
 
 .dialog-title + .dialog-note {
@@ -824,18 +851,29 @@ body {
 }
 
 @media (hover: hover) {
-  .dialog-btn:hover:not(:disabled) {
+  .dialog-btn:hover:not(:disabled):not(.is-primary) {
     background: var(--hover);
   }
 }
 
-.dialog-btn:active:not(:disabled) {
+.dialog-btn:active:not(:disabled):not(.is-primary) {
   background: var(--hover);
 }
 
+/* The thing the dialog is for: the theme's ink, filled. */
 .dialog-btn.is-primary {
+  color: var(--bg);
+  background: var(--fg);
   border-color: var(--fg);
-  box-shadow: inset 0 0 0 1px var(--fg);
+}
+
+.dialog-btn.is-primary:active:not(:disabled) {
+  opacity: 0.85;
+}
+
+/* The way back out: the same ink, drawn rather than filled. */
+.dialog-btn.is-secondary {
+  border-color: var(--fg);
 }
 
 .dialog-btn:disabled {
@@ -1265,25 +1303,15 @@ body {
     width: 14ch;
   }
 
-  /* Off the edges and into the middle of the screen. */
+  /* Off the edges: the card is centred at every size, but up here it should
+     not touch them even at its widest. */
   .dialog-backdrop {
-    align-items: center;
-    justify-content: center;
     padding: 1.5rem;
   }
 
   .dialog {
-    flex: 0 1 auto;
-    width: 24rem;
-    max-height: 100%;
+    /* No keyboard to step out of the way of on a desktop. */
     padding-bottom: 1rem;
-    border: 1px solid var(--fg);
-    border-radius: 2px;
-    box-shadow: 0 6px 24px rgb(0 0 0 / 0.3);
-  }
-
-  .dialog-actions {
-    margin-top: 0;
   }
 
   .editor-bar {

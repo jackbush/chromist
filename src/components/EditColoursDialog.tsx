@@ -45,25 +45,10 @@ export function EditColoursDialog({ pins, onApply, onClose }: Props) {
   return (
     <Modal
       title="Edit colours"
-      titleId="edit-colours-title"
-      note={`List up to ${MAX_PINS} colours`}
-      noteId="edit-colours-note"
+      description={`List up to ${MAX_PINS} colours`}
       onClose={onClose}
-      actions={
-        <>
-          <button type="button" className="dialog-btn" onClick={onClose}>
-            Cancel
-          </button>
-          <button
-            type="button"
-            className="dialog-btn is-primary"
-            onClick={apply}
-            disabled={errors.length > 0}
-          >
-            Apply
-          </button>
-        </>
-      }
+      secondary={{ label: 'Cancel', onClick: onClose }}
+      primary={{ label: 'Apply', onClick: apply, disabled: errors.length > 0 }}
     >
       {/* The numbers are decoration over the field, not content in it: with
           the line count fixed there is nothing to scroll or keep in sync. */}
@@ -85,7 +70,6 @@ export function EditColoursDialog({ pins, onApply, onClose }: Props) {
           autoCorrect="off"
           autoCapitalize="off"
           aria-label={`Colours, one per line, up to ${MAX_PINS}`}
-          aria-describedby="edit-colours-note"
           aria-invalid={errors.length > 0}
           // Enter belongs to the textarea; the modifier commits the lot.
           onKeyDown={(e) => {

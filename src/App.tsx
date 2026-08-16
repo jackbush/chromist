@@ -12,10 +12,22 @@ import { PinnedPane } from './components/PinnedPane'
 import { Editor } from './components/Editor'
 import { ActionBar } from './components/ActionBar'
 import { ContrastAudit } from './components/ContrastAudit'
+import { Modal } from './components/Modal'
 import type { Vision } from './cvd'
+
+/** Something the app will not do without being told twice. Held as data rather
+ *  than as a flag per question, so the dialog is written once. */
+type Question = {
+  title: string
+  description: string
+  /** Names the act, not the agreement: "Switch", never "OK". */
+  confirmLabel: string
+  onConfirm: () => void
+}
 
 export function App() {
   const initial = useInitialState()
+  const [question, setQuestion] = useState<Question | null>(null)
 
   const {
     present: pins,
@@ -115,14 +127,19 @@ export function App() {
       )
       if (affected > 0) {
         const many = affected > 1
-        const ok = window.confirm(
-          `Switch to ${next.label}?\n\n` +
+        setQuestion({
+          title: `Switch to ${next.label}?`,
+          description:
             `${affected} ${many ? 'colours are' : 'colour is'} outside sRGB, which ` +
             `${next.label} can't describe. ${many ? 'Each will' : 'It will'} be replaced by ` +
             `the nearest colour that fits.`,
-        )
-        if (!ok) return
-        commit(pins.map((p) => ({ ...p, colour: toGamut(p.colour, 'srgb') })))
+          confirmLabel: 'Switch',
+          onConfirm: () => {
+            commit(pins.map((p) => ({ ...p, colour: toGamut(p.colour, 'srgb') })))
+            setSettings((s) => ({ ...s, mode }))
+          },
+        })
+        return
       }
       setSettings((s) => ({ ...s, mode }))
     },
@@ -154,16 +171,18 @@ export function App() {
   /** Wipes the palette, the settings and the stored copy of both. Destructive
    *  and not undoable, so it asks first. */
   const handleReset = useCallback(() => {
-    const ok = window.confirm(
-      'Reset everything?\n\nThis clears your palette and settings. It cannot be undone.',
-    )
-    if (!ok) return
-
-    clearStorage()
-    const fresh: Pin = { id: newId(), colour: randomColour() }
-    reset([fresh])
-    setSelectedId(fresh.id)
-    setSettings(DEFAULT_SETTINGS)
+    setQuestion({
+      title: 'Reset everything?',
+      description: 'This clears your palette and settings. It cannot be undone.',
+      confirmLabel: 'Reset',
+      onConfirm: () => {
+        clearStorage()
+        const fresh: Pin = { id: newId(), colour: randomColour() }
+        reset([fresh])
+        setSelectedId(fresh.id)
+        setSettings(DEFAULT_SETTINGS)
+      },
+    })
   }, [reset])
 
   useEffect(() => {
@@ -247,6 +266,23 @@ export function App() {
             onModeChange={handleModeChange}
           />
         </main>
+      )}
+
+      {question && (
+        <Modal
+          variant="alert"
+          title={question.title}
+          description={question.description}
+          onClose={() => setQuestion(null)}
+          secondary={{ label: 'Cancel', onClick: () => setQuestion(null) }}
+          primary={{
+            label: question.confirmLabel,
+            onClick: () => {
+              question.onConfirm()
+              setQuestion(null)
+            },
+          }}
+        />
       )}
     </div>
   )
