@@ -2,6 +2,10 @@
  * navigator.clipboard needs a secure origin, which rules out plain-http LAN
  * testing on a phone — hence the legacy fallback.
  */
+/** How long a copy stays acknowledged. Touch has no hover to end the state, so
+ *  the clipboard mark has to time itself out. */
+export const COPIED_MS = 1000
+
 export async function copy(text: string): Promise<boolean> {
   try {
     if (navigator.clipboard?.writeText) {

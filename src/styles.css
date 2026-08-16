@@ -126,19 +126,26 @@ body {
 }
 
 .bar-share.is-copied {
-  opacity: 0.35;
+  animation: share-flash 400ms linear;
 }
 
 /* The clipboard only appears on hover, but its space is always reserved so
-   the label never shifts. */
-.bar-share svg {
+   the label never shifts. Touch has no hover to reveal it with — or to end,
+   which is why a copy shows it on a timer instead. */
+.bar-share .clip {
   opacity: 0;
-  transition: opacity 80ms linear;
+  transition: opacity 120ms linear;
 }
 
-.bar-share:hover svg,
-.bar-share:focus-visible svg {
+.bar-share:focus-visible .clip,
+.bar-share.is-copied .clip {
   opacity: 1;
+}
+
+@media (hover: hover) {
+  .bar-share:hover .clip {
+    opacity: 1;
+  }
 }
 
 .bar-actions {
@@ -193,7 +200,9 @@ body {
   position: relative;
 }
 
+/* Rides above its neighbours as they slide out from under it. */
 .pin.is-dragging {
+  z-index: 2;
   opacity: 0.75;
 }
 
@@ -227,7 +236,27 @@ body {
 }
 
 .pin-hex.is-copied {
-  opacity: 0.35;
+  animation: hex-flash 400ms linear;
+}
+
+@keyframes hex-flash {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  40% {
+    opacity: 0.35;
+  }
+}
+
+@keyframes share-flash {
+  0%,
+  100% {
+    opacity: 0.75;
+  }
+  40% {
+    opacity: 0.35;
+  }
 }
 
 /* Out of flow, so the code stays dead centre of the cell whether or not the
@@ -248,12 +277,20 @@ body {
   .pin-hex svg {
     display: block;
     opacity: 0;
-    transition: opacity 80ms linear;
+    transition: opacity 120ms linear;
   }
 
-  .pin-hex:hover svg,
-  .pin-hex:focus-visible svg {
+  /* On touch a tap is the only way in, so the copy itself reveals the mark —
+     and times it back out, since there is no hover to end. */
+  .pin-hex:focus-visible svg,
+  .pin-hex.is-copied svg {
     opacity: 1;
+  }
+
+  @media (hover: hover) {
+    .pin-hex:hover svg {
+      opacity: 1;
+    }
   }
 }
 

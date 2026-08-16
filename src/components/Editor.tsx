@@ -20,6 +20,22 @@ export function Editor({ colour, onChange, onDelete }: Props) {
   const [draft, setDraft] = useState(hex)
   useEffect(() => setDraft(hex), [hex])
 
+  // iOS scrolls the document to lift a focused field clear of the keyboard.
+  // The layout is exactly one viewport tall and has nothing to scroll to, so
+  // that only drags the app off screen — put it straight back.
+  const [focused, setFocused] = useState(false)
+  useEffect(() => {
+    if (!focused) return
+    const pin = () => window.scrollTo(0, 0)
+    pin()
+    window.addEventListener('scroll', pin)
+    window.visualViewport?.addEventListener('resize', pin)
+    return () => {
+      window.removeEventListener('scroll', pin)
+      window.visualViewport?.removeEventListener('resize', pin)
+    }
+  }, [focused])
+
   const commitText = (text: string) => {
     const candidate = text.trim().startsWith('#') ? text.trim() : `#${text.trim()}`
     if (!COMPLETE.test(candidate)) {
@@ -40,10 +56,15 @@ export function Editor({ colour, onChange, onDelete }: Props) {
           value={draft}
           spellCheck={false}
           autoComplete="off"
+          autoCorrect="off"
           autoCapitalize="off"
           inputMode="text"
+          // A checkmark rather than a newline: there is nothing to submit and
+          // nowhere to go next.
+          enterKeyHint="done"
           maxLength={7}
           aria-label="Hex code"
+          onFocus={() => setFocused(true)}
           onChange={(e) => {
             const text = e.target.value
             setDraft(text)
@@ -54,7 +75,10 @@ export function Editor({ colour, onChange, onDelete }: Props) {
               if (next) onChange(next)
             }
           }}
-          onBlur={(e) => commitText(e.target.value)}
+          onBlur={(e) => {
+            setFocused(false)
+            commitText(e.target.value)
+          }}
           onKeyDown={(e) => {
             if (e.key === 'Enter') {
               commitText(e.currentTarget.value)

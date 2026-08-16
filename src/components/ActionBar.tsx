@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { Pin, Settings } from '../types'
 import { buildShareUrl } from '../urlHash'
-import { copy } from '../clipboard'
+import { COPIED_MS, copy } from '../clipboard'
 import { SettingsPopover } from './SettingsPopover'
-import { ClipboardIcon, RedoIcon, ResetIcon, SettingsIcon, UndoIcon } from './icons'
+import { ClipboardIcon, RedoIcon, ResetIcon, SettingsIcon, ShareIcon, UndoIcon } from './icons'
 
 type Props = {
   pins: Pin[]
@@ -53,7 +53,7 @@ export function ActionBar({
     await copy(buildShareUrl(pins))
     setCopied(true)
     if (flashTimer.current) window.clearTimeout(flashTimer.current)
-    flashTimer.current = window.setTimeout(() => setCopied(false), 400)
+    flashTimer.current = window.setTimeout(() => setCopied(false), COPIED_MS)
   }, [pins])
 
   return (
@@ -65,8 +65,9 @@ export function ActionBar({
           onClick={handleCopyLink}
           title="Copy a link to this palette"
         >
+          <ShareIcon size={14} />
           Share this palette
-          <ClipboardIcon size={14} />
+          <ClipboardIcon size={14} className="clip" />
         </button>
       </h1>
 
