@@ -42,10 +42,13 @@ export type Mode = {
   fullSquare: boolean
   toCoords: (c: Colour, hueHint: number) => Coords
   fromCoords: (co: Coords) => Colour
-  /** What the text field shows. CSS notation where the mode has one, hex where
-   *  it does not — emitting `hsb(…)` would be inviting a paste into a
-   *  stylesheet that silently does nothing. */
-  format: ((c: Colour, co: Coords) => string) | null
+  /** The mode's CSS notation, split so the two places it is used can differ:
+   *  the field shows `args` alone, because the function name is fixed by the
+   *  space already named in the select beside it, and the clipboard gets
+   *  `fn(args)` so what you paste is a colour. Null where there is no CSS
+   *  notation and both show hex — emitting `hsb(…)` would be inviting a paste
+   *  into a stylesheet that silently does nothing. */
+  css: { fn: string; args: (c: Colour, co: Coords) => string } | null
 }
 
 const toOklab = converter('oklab')
@@ -88,7 +91,7 @@ function polar(
   yKey: string,
   x: Axis,
   y: Axis,
-  format: Mode['format'],
+  css: Mode['css'],
 ): Mode {
   // culori keeps these channels as fractions and hue in degrees; the UI wants
   // percentages, which is the only difference between its units and ours.
@@ -115,7 +118,7 @@ function polar(
         // Only OKHSL can fail here, and only at the ends of its lightness axis.
         yKey === 'l' ? co.y / 100 : 0,
       ),
-    format,
+    css,
   }
 }
 
@@ -130,7 +133,7 @@ export const MODES: Mode[] = [
     'l',
     PCT('S'),
     PCT('L'),
-    (_c, co) => `hsl(${round(co.s, 0)} ${round(co.x, 0)}% ${round(co.y, 0)}%)`,
+    { fn: 'hsl', args: (_c, co) => `${round(co.s, 0)} ${round(co.x, 0)}% ${round(co.y, 0)}%` },
   ),
   polar(
     'hsb',
@@ -150,7 +153,7 @@ export const MODES: Mode[] = [
     'b',
     PCT('W'),
     PCT('B'),
-    (_c, co) => `hwb(${round(co.s, 0)} ${round(co.x, 0)}% ${round(co.y, 0)}%)`,
+    { fn: 'hwb', args: (_c, co) => `${round(co.s, 0)} ${round(co.x, 0)}% ${round(co.y, 0)}%` },
   ),
   polar(
     'okhsl',
@@ -175,7 +178,7 @@ export const MODES: Mode[] = [
       return { x: p.c ?? 0, y: p.l ?? 0, s: isGrey(c) ? hueHint : (p.h ?? hueHint) }
     },
     fromCoords: (co) => oklab(toOklab({ mode: 'oklch', l: co.y, c: co.x, h: co.s }) ?? {}),
-    format: (_c, co) => `oklch(${round(co.y, 3)} ${round(co.x, 3)} ${round(co.s, 1)})`,
+    css: { fn: 'oklch', args: (_c, co) => `${round(co.y, 3)} ${round(co.x, 3)} ${round(co.s, 1)}` },
   },
   {
     id: 'lch',
@@ -190,7 +193,7 @@ export const MODES: Mode[] = [
       return { x: p.c ?? 0, y: p.l ?? 0, s: isGrey(c) ? hueHint : (p.h ?? hueHint) }
     },
     fromCoords: (co) => oklab(toOklab({ mode: 'lch', l: co.y, c: co.x, h: co.s }) ?? {}),
-    format: (_c, co) => `lch(${round(co.y, 1)}% ${round(co.x, 1)} ${round(co.s, 1)})`,
+    css: { fn: 'lch', args: (_c, co) => `${round(co.y, 1)}% ${round(co.x, 1)} ${round(co.s, 1)}` },
   },
 ]
 

@@ -59,14 +59,19 @@ export function Editor({ colour, mode: modeId, onChange, onModeChange }: Props) 
     onChange(fitted)
   }
 
-  // What the field shows: the mode's own CSS notation where it has one, and hex
-  // where it doesn't — see `format` in modes.ts.
-  const text = mode.format ? mode.format(colour, coords) : toHex(colour).toUpperCase()
+  // What the field shows, and what leaves on the clipboard. They differ for the
+  // CSS modes: the field carries the channels alone, since the space is named
+  // in the select immediately to its left and `oklch(…)` around every value
+  // only says it again, while the clipboard gets the function back so what you
+  // paste is a colour. Hex is the same both ways, `#` included — see `css` in
+  // modes.ts.
+  const text = mode.css ? mode.css.args(colour, coords) : toHex(colour).toUpperCase()
+  const copyText = mode.css ? `${mode.css.fn}(${text})` : text
 
   const [copied, setCopied] = useState(false)
   const copyTimer = useRef<number | null>(null)
   const handleCopy = async () => {
-    await copy(text)
+    await copy(copyText)
     setCopied(true)
     if (copyTimer.current) window.clearTimeout(copyTimer.current)
     copyTimer.current = window.setTimeout(() => setCopied(false), COPIED_MS)
@@ -93,9 +98,18 @@ export function Editor({ colour, mode: modeId, onChange, onModeChange }: Props) 
 
   /** Anything culori can read is accepted, whatever the current mode: a hex
    *  code, `oklch(…)`, `color(display-p3 …)`. The mode decides what is written
-   *  back out, not what may be typed in. */
+   *  back out, not what may be typed in.
+   *
+   *  Two readings need a missing piece put back, since what the field hands
+   *  back may be shorn of it: a hex code without its `#`, and — now that the
+   *  function name is not shown — channels without the `oklch(…)` around them.
+   *  The second is only tried once the text has failed to parse as it stands,
+   *  so a value that is already a colour is never second-guessed. */
   const commitText = (value: string) => {
-    const next = parseColour(value.trim().match(/^[0-9a-f]{3,6}$/i) ? `#${value.trim()}` : value)
+    const typed = value.trim()
+    const next =
+      parseColour(typed.match(/^[0-9a-f]{3,6}$/i) ? `#${typed}` : typed) ??
+      (mode.css ? parseColour(`${mode.css.fn}(${typed})`) : null)
     if (!next) {
       setDraft(text) // not a colour — put the real value back
       return
@@ -147,7 +161,7 @@ export function Editor({ colour, mode: modeId, onChange, onModeChange }: Props) 
             // A checkmark rather than a newline: there is nothing to submit and
             // nowhere to go next.
             enterKeyHint="done"
-            aria-label={`Colour value, ${mode.format ? mode.label : 'hex'}`}
+            aria-label={`Colour value, ${mode.css ? mode.label : 'hex'}`}
             onFocus={() => setFocused(true)}
             onChange={(e) => setDraft(e.target.value)}
             onBlur={(e) => {
@@ -170,7 +184,7 @@ export function Editor({ colour, mode: modeId, onChange, onModeChange }: Props) 
             type="button"
             className={`editor-copy${copied ? ' is-copied' : ''}`}
             onClick={handleCopy}
-            aria-label={`Copy ${text}`}
+            aria-label={`Copy ${copyText}`}
             title="Copy this value"
           >
             <ClipboardIcon size={18} />

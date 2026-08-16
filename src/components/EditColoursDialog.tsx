@@ -50,7 +50,7 @@ export function EditColoursDialog({ pins, onApply, onClose }: Props) {
       secondary={{ label: 'Cancel', onClick: onClose }}
       primary={{ label: 'Apply', onClick: apply, disabled: errors.length > 0 }}
     >
-      {/* The numbers are decoration over the field, not content in it: with
+      {/* The numbers are decoration beside the field, not content in it: with
           the line count fixed there is nothing to scroll or keep in sync. */}
       <div className="dialog-field">
         <ol className="dialog-lines" aria-hidden="true">

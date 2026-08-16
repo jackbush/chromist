@@ -761,28 +761,45 @@ body {
   margin-top: 0.25rem;
 }
 
-/* Everything in here is measured in the same line box, so the numbers sit on
-   the codes without either side having to be told the other's height. */
+/* Everything in here is measured in the same line box, so the numbers line up
+   with the codes without either side having to be told the other's height.
+
+   The numbers are a column beside the field rather than a layer over it: a
+   `color(display-p3 …)` is wider than the box, and anything laid over a field
+   that scrolls sideways is a place for the text to slide underneath. The box
+   the two of them share carries the border, so it still reads as one field. */
 .dialog-field {
-  position: relative;
+  display: flex;
+  align-items: stretch;
+  border: 1px solid var(--line);
+  border-radius: 2px;
+  /* The field's own scrolling stops at the corners rather than past them. */
+  overflow: hidden;
   --dialog-line: 1.9;
   --dialog-pad: 0.625rem;
   --dialog-gutter: 2.25ch;
 }
 
+/* The whole box is the focus target — the textarea is the only thing in it that
+   can take focus, and a ring drawn around the text alone would leave the
+   numbers stranded outside the field it belongs to. */
+.dialog-field:focus-within {
+  border-color: var(--fg);
+  outline: 2px solid var(--fg);
+  outline-offset: 2px;
+}
+
 .dialog-lines {
-  position: absolute;
-  top: 0;
-  left: 0;
-  padding: calc(var(--dialog-pad) + 1px) 0 0 0.75rem;
+  flex: 0 0 auto;
+  padding: var(--dialog-pad) 0.75ch var(--dialog-pad) 0.75rem;
   list-style: none;
   font-size: 1rem;
   line-height: var(--dialog-line);
   text-align: right;
-  width: calc(0.75rem + var(--dialog-gutter));
-  /* Faint enough to stay behind the codes, dark enough to be read: at 0.35 the
-     numbers were about 2.3:1 against the paper, which is not a colour tool's
-     business to be shipping. */
+  width: calc(0.75rem + var(--dialog-gutter) + 0.75ch);
+  /* Quiet enough to stay out of the codes' way, dark enough to be read: at 0.35
+     the numbers were about 2.3:1 against the paper, which is not a colour
+     tool's business to be shipping. */
   opacity: 0.55;
   pointer-events: none;
 }
@@ -790,13 +807,13 @@ body {
 /* Exactly as tall as the palette is long: seven lines, no scrollbar, and the
    empty ones read as the room that's left. */
 .dialog-input {
-  flex: 0 0 auto;
-  width: 100%;
+  flex: 1 1 auto;
+  /* Without this a long line widens the flex item instead of scrolling in it. */
+  min-width: 0;
   resize: none;
   overflow-x: auto;
   overflow-y: hidden;
-  padding: var(--dialog-pad) 0.75rem var(--dialog-pad)
-    calc(0.75rem + var(--dialog-gutter) + 0.75ch);
+  padding: var(--dialog-pad) 0.75rem var(--dialog-pad) 0;
   font: inherit;
   font-size: 1rem;
   line-height: var(--dialog-line);
@@ -804,13 +821,8 @@ body {
   text-transform: uppercase;
   color: inherit;
   background: none;
-  border: 1px solid var(--line);
-  border-radius: 2px;
-  outline-offset: 2px;
-}
-
-.dialog-input:focus {
-  border-color: var(--fg);
+  border: 0;
+  outline: none; /* the box around it draws the ring */
 }
 
 /* No red to reach for in a three-tone palette — a bad line reads at full
